@@ -27,6 +27,7 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule()
                 appSecret: config.getOrThrow<string>('OBSERVE_APP_SECRET'),
 
                 serviceId: 'stackoverflow-api',
+                forwardLogs: config.get<string>('OBSERVE_ENABLED', 'true') === 'true',
             }),
         }),
 

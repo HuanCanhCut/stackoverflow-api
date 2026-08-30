@@ -1,4 +1,5 @@
 import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus } from '@nestjs/common'
+import { ConfigService } from '@nestjs/config'
 import { TracerService } from '@nestjs/observe'
 import type { Request, Response } from 'express'
 
@@ -6,7 +7,10 @@ import { snakeCaseKeys } from '../utils/object.util.js'
 
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
-    constructor(private readonly tracerService: TracerService) {}
+    constructor(
+        private readonly tracerService: TracerService,
+        private readonly configService: ConfigService,
+    ) {}
 
     async catch(exception: Error, host: ArgumentsHost) {
         const ctx = host.switchToHttp()
@@ -16,8 +20,10 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 
         const status = exception instanceof HttpException ? exception.getStatus() : HttpStatus.INTERNAL_SERVER_ERROR
 
+        const shouldCaptureError = this.configService.get<string>('OBSERVE_ENABLED', 'true') === 'true'
+
         // Observe vẫn nhận lỗi thật
-        if (status >= 500) {
+        if (status >= 500 && shouldCaptureError) {
             await this.tracerService.captureError(exception, {
                 method: request.method,
                 path: request.originalUrl,
