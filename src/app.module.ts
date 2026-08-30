@@ -1,11 +1,14 @@
 import { Module } from '@nestjs/common'
 import { AppController } from './app.controller.js'
-import { AppService } from './app.service.js'
 import { createObserveModule } from '@nestjs/observe'
 import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core'
 import { ConfigModule, ConfigService } from '@nestjs/config'
 import { HttpLoggingInterceptor } from './common/interceptors/http-logging.interceptor.js'
 import { GlobalExceptionFilter } from './error/errorHanlder.js'
+import { AuthModule } from './auth/auth.module.js'
+import { redisProvider } from './config/redis/redis.client.js'
+import { RedisModule } from './config/redis/redis.module.js'
+import { JwtModule } from '@nestjs/jwt'
 
 export const { ObserveModule, ObserveInstrument } = createObserveModule()
 
@@ -25,11 +28,23 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule()
                 serviceId: 'stackoverflow-api',
             }),
         }),
+
+        AuthModule,
+        RedisModule,
+        JwtModule.registerAsync({
+            global: true,
+            inject: [ConfigService],
+            useFactory: (configService: ConfigService) => ({
+                secret: configService.getOrThrow<string>('JWT_SECRET'),
+                signOptions: {
+                    expiresIn: '60s',
+                },
+            }),
+        }),
     ],
 
     controllers: [AppController],
     providers: [
-        AppService,
         {
             provide: APP_INTERCEPTOR,
             useClass: HttpLoggingInterceptor,

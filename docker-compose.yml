@@ -1,0 +1,41 @@
+services:
+    db:
+        image: mysql:8.4
+        container_name: stackoverflow-mysql
+
+        environment:
+            MYSQL_DATABASE: ${DB_NAME}
+            MYSQL_USER: ${DB_USER}
+            MYSQL_PASSWORD: ${DB_PASSWORD}
+            MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+
+        ports:
+            - '3306:3306'
+
+        volumes:
+            - mysql_data:/var/lib/mysql
+
+        mem_limit: 512m
+
+        networks:
+            - stackoverflow
+
+    redis:
+        image: redis:7-alpine
+        container_name: stackoverflow-redis
+        ports:
+            - '6379:6379'
+        volumes:
+            - redis_data:/data
+        command: redis-server --maxmemory 128mb --maxmemory-policy noeviction
+        mem_limit: 256m
+        networks:
+            - stackoverflow
+
+volumes:
+    mysql_data:
+    redis_data:
+
+networks:
+    stackoverflow:
+        driver: bridge
