@@ -9,6 +9,7 @@ import { AuthModule } from './auth/auth.module.js'
 import { redisProvider } from './config/redis/redis.client.js'
 import { RedisModule } from './config/redis/redis.module.js'
 import { JwtModule } from '@nestjs/jwt'
+import { PrismaModule } from './prisma.module.js'
 
 export const { ObserveModule, ObserveInstrument } = createObserveModule()
 
@@ -31,6 +32,7 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule()
 
         AuthModule,
         RedisModule,
+        PrismaModule,
         JwtModule.registerAsync({
             global: true,
             inject: [ConfigService],
