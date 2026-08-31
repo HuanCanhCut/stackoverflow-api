@@ -2,14 +2,17 @@ import { Injectable, UnauthorizedException } from '@nestjs/common'
 import { JwtService } from '@nestjs/jwt'
 import bcrypt from 'bcrypt'
 import { randomUUID } from 'crypto'
+import { Redis } from 'ioredis'
 
-import { PrismaService } from '../prisma.service.js'
+import { PrismaService } from '../config/prisma/prisma.service.js'
+import { JwtPayload } from '../type.js'
 
 @Injectable()
 export class AuthService {
     constructor(
         private readonly prisma: PrismaService,
         private readonly jwtService: JwtService,
+        private readonly redis: Redis,
     ) {}
 
     async login({ email, password }: { email: string; password: string }) {
@@ -42,6 +45,32 @@ export class AuthService {
         const accessToken = this.jwtService.sign(payload, { expiresIn: '30m' })
         const refreshToken = this.jwtService.sign(payload, { expiresIn: '7d' })
 
-        return { user, accessToken, refreshToken }
+        const { password: _, ...safeUser } = user
+
+        return { user: safeUser, accessToken, refreshToken }
+    }
+
+    async logout({ access_token, refresh_token }: { access_token?: string; refresh_token?: string }) {
+        let decodedRefreshToken: JwtPayload | null = null
+
+        try {
+            if (refresh_token) {
+                decodedRefreshToken = this.jwtService.decode(refresh_token)
+            }
+        } catch (_) {
+            //
+        }
+
+        if (decodedRefreshToken) {
+            await this.prisma.refreshToken.delete({
+                where: {
+                    jti: decodedRefreshToken?.jti,
+                },
+            })
+        }
+
+        if (access_token) {
+            await this.redis.set(`access_token:${access_token}`, 'true', 'EX', '30m')
+        }
     }
 }

@@ -1,7 +1,7 @@
-import { Inject, Injectable, NestMiddleware, UnauthorizedException } from '@nestjs/common'
+import { Injectable, NestMiddleware, UnauthorizedException } from '@nestjs/common'
 import { JwtService } from '@nestjs/jwt'
-import type { Response, NextFunction } from 'express'
-import type { Redis } from 'ioredis'
+import type { NextFunction, Response } from 'express'
+import { Redis } from 'ioredis'
 import { JsonWebTokenError, TokenExpiredError } from 'jsonwebtoken'
 
 import type { IRequest } from '../../type.js'

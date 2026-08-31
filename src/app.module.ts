@@ -1,15 +1,15 @@
 import { Module } from '@nestjs/common'
-import { AppController } from './app.controller.js'
-import { createObserveModule } from '@nestjs/observe'
-import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core'
 import { ConfigModule, ConfigService } from '@nestjs/config'
-import { HttpLoggingInterceptor } from './common/interceptors/http-logging.interceptor.js'
-import { GlobalExceptionFilter } from './error/errorHanlder.js'
-import { AuthModule } from './auth/auth.module.js'
-import { redisProvider } from './config/redis/redis.client.js'
-import { RedisModule } from './config/redis/redis.module.js'
+import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core'
 import { JwtModule } from '@nestjs/jwt'
-import { PrismaModule } from './prisma.module.js'
+import { createObserveModule } from '@nestjs/observe'
+
+import { AppController } from './app.controller.js'
+import { AuthModule } from './auth/auth.module.js'
+import { HttpLoggingInterceptor } from './common/interceptors/http-logging.interceptor.js'
+import { PrismaModule } from './config/prisma/prisma.module.js'
+import { RedisModule } from './config/redis/redis.module.js'
+import { GlobalExceptionFilter } from './error/errorHanlder.js'
 
 export const { ObserveModule, ObserveInstrument } = createObserveModule()
 

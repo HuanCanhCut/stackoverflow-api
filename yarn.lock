@@ -2675,7 +2675,7 @@ inquirer@8.2.6:
 
 ioredis@^6.0.0:
   version "6.0.0"
-  resolved "https://registry.npmjs.org/ioredis/-/ioredis-6.0.0.tgz"
+  resolved "https://registry.yarnpkg.com/ioredis/-/ioredis-6.0.0.tgz#b757c590547c43a5e18ea9c312d05c5c46c7e6fa"
   integrity sha512-f+Dtubxfpf6KYFq7WVXJoOLn0bk4TJrMrN9SzeE+jrWrCWj7XX3fA6vkryafhADX+GMymRxgDJDOI33COkJc0w==
   dependencies:
     "@ioredis/commands" "2.0.0"
