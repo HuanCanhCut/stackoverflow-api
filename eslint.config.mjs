@@ -48,6 +48,7 @@ export default [
             '@typescript-eslint/no-unsafe-return': 'off',
             '@typescript-eslint/no-unsafe-declaration-merging': 'off',
             '@typescript-eslint/no-empty-object-type': 'off',
+            'no-useless-assignment': 'off',
 
             'prettier/prettier': [
                 'warn',

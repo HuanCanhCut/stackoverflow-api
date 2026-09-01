@@ -4,6 +4,7 @@ import { responseData } from '../schemas/response/index.js'
 import { AuthService } from './auth.service.js'
 import { LoginDTO } from './dto/login.dto.js'
 import { LogoutDTO } from './dto/logout.dto.js'
+import { RefreshTokenDTO } from './dto/refresh_token.dto.js'
 
 @Controller('auth')
 export class AuthController {
@@ -26,5 +27,16 @@ export class AuthController {
     @HttpCode(HttpStatus.NO_CONTENT)
     async logout(@Body() body: LogoutDTO) {
         await this.authService.logout({ access_token: body.access_token, refresh_token: body.refresh_token })
+    }
+
+    @Post('refresh')
+    @HttpCode(HttpStatus.OK)
+    async refreshToken(@Body() body: RefreshTokenDTO) {
+        const { accessToken, refreshToken } = await this.authService.refreshToken({ refresh_token: body.refresh_token })
+
+        return responseData(null, {
+            access_token: accessToken,
+            refresh_token: refreshToken,
+        })
     }
 }
