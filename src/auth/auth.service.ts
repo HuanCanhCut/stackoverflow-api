@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common'
+import { BadRequestException, ConflictException, Injectable, UnauthorizedException } from '@nestjs/common'
 import { JwtService } from '@nestjs/jwt'
 import bcrypt from 'bcrypt'
 import { randomUUID } from 'crypto'
@@ -152,5 +152,69 @@ export class AuthService {
         })
 
         return { accessToken: newAccessToken, refreshToken: newRefreshToken }
+    }
+
+    async register({ email, password, full_name }: { email: string; password: string; full_name: string }) {
+        const salt = await bcrypt.genSalt(12)
+        const passwordHashed = await bcrypt.hash(password, salt)
+
+        const splitName = full_name.trim().split(' ')
+
+        const firstName = splitName.length === 1 ? '' : splitName.slice(0, splitName.length - 1).join(' ')
+        const lastName = splitName.slice(splitName.length - 1).join(' ')
+
+        const isExitsEmail = await this.prisma.user.findUnique({
+            where: {
+                email,
+            },
+        })
+
+        if (isExitsEmail) {
+            throw new ConflictException('Tài khoản đã tồn tại')
+        }
+
+        const user = await this.prisma.user.create({
+            data: {
+                email,
+                password: passwordHashed,
+                first_name: firstName,
+                last_name: lastName,
+                is_active: false,
+                sign_in_provider: 'email',
+                nickname: randomUUID(),
+            },
+        })
+
+        const accessToken = this.jwtService.sign(
+            {
+                sub: user.id,
+                jti: randomUUID(),
+            },
+            {
+                secret: process.env.JWT_SECRET,
+                expiresIn: process.env.ACCESS_TOKEN_EXP as StringValue,
+            },
+        )
+
+        const refreshToken = this.jwtService.sign(
+            {
+                sub: user.id,
+                jti: randomUUID(),
+            },
+            {
+                secret: process.env.JWT_REFRESH_SECRET,
+                expiresIn: process.env.REFRESH_TOKEN_EXP as StringValue,
+            },
+        )
+
+        await this.prisma.refreshToken.create({
+            data: {
+                token: refreshToken,
+                jti: randomUUID(),
+                user_id: user.id,
+            },
+        })
+
+        return { user, accessToken, refreshToken }
     }
 }

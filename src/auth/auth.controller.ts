@@ -5,6 +5,7 @@ import { AuthService } from './auth.service.js'
 import { LoginDTO } from './dto/login.dto.js'
 import { LogoutDTO } from './dto/logout.dto.js'
 import { RefreshTokenDTO } from './dto/refresh_token.dto.js'
+import { RegisterDTO } from './dto/register.dto.js'
 
 @Controller('auth')
 export class AuthController {
@@ -35,6 +36,20 @@ export class AuthController {
         const { accessToken, refreshToken } = await this.authService.refreshToken({ refresh_token: body.refresh_token })
 
         return responseData(null, {
+            access_token: accessToken,
+            refresh_token: refreshToken,
+        })
+    }
+
+    @Post('register')
+    async register(@Body() body: RegisterDTO) {
+        const { user, accessToken, refreshToken } = await this.authService.register({
+            email: body.email,
+            password: body.password,
+            full_name: body.full_name,
+        })
+
+        return responseData(user, {
             access_token: accessToken,
             refresh_token: refreshToken,
         })
