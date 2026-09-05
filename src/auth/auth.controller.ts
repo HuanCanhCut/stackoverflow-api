@@ -4,6 +4,7 @@ import { responseData } from '../schemas/response/index.js'
 import type { IRequest } from '../type.js'
 import { AuthService } from './auth.service.js'
 import { LoginDTO } from './dto/login.dto.js'
+import { loginWithTokenDTO } from './dto/loginWithToken.dto.js'
 import { LogoutDTO } from './dto/logout.dto.js'
 import { RefreshTokenDTO } from './dto/refresh_token.dto.js'
 import { RegisterDTO } from './dto/register.dto.js'
@@ -61,5 +62,17 @@ export class AuthController {
         const user = await this.authService.getCurrentUser(req.decoded.sub)
 
         return responseData(user)
+    }
+
+    @Post('login-with-token')
+    async loginWithToken(@Body() body: loginWithTokenDTO) {
+        const { token } = body
+
+        const { accessToken, refreshToken, user } = await this.authService.loginWithToken(token)
+
+        return responseData(user, {
+            access_token: accessToken,
+            refresh_token: refreshToken,
+        })
     }
 }

@@ -61,6 +61,7 @@ export const extendPrismaClient = (basePrisma: PrismaClient) => {
                                 password: true,
                                 email: true,
                                 sign_in_provider: true,
+                                provider_uid: true,
                                 ...anyArgs.omit,
                             }
                         }

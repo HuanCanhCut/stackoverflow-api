@@ -2,6 +2,7 @@ import { BadRequestException, ConflictException, Injectable, UnauthorizedExcepti
 import { JwtService } from '@nestjs/jwt'
 import bcrypt from 'bcrypt'
 import { randomUUID } from 'crypto'
+import { getAuth } from 'firebase-admin/auth'
 import { Redis } from 'ioredis'
 import type { StringValue } from 'ms'
 
@@ -26,7 +27,7 @@ export class AuthService {
             },
         })
 
-        if (!user) {
+        if (!user || !user.password) {
             throw new UnauthorizedException('Email hoặc mật khẩu không chính xác')
         }
 
@@ -230,5 +231,117 @@ export class AuthService {
         }
 
         return user
+    }
+
+    async loginWithToken(token: string) {
+        const decodedToken = await getAuth().verifyIdToken(token)
+
+        const {
+            firebase: { sign_in_provider },
+        } = decodedToken
+
+        const {
+            photoURL,
+            displayName,
+            uid,
+            providerData: [{ email }],
+        } = await getAuth().getUser(decodedToken.uid)
+
+        let hasUser = await this.prisma.user.findUnique({
+            where: {
+                provider_uid: uid,
+            },
+        })
+
+        /**
+         * Handle link account if account with same email is already exists but is not linked with firebase
+         */
+
+        if (email) {
+            const hasUserWithEmail = await this.prisma.user.findFirst({
+                where: {
+                    email,
+                    provider_uid: null,
+                    sign_in_provider: 'email',
+                },
+            })
+
+            if (hasUserWithEmail) {
+                await this.prisma.user.update({
+                    where: {
+                        id: hasUserWithEmail.id,
+                    },
+                    data: {
+                        provider_uid: uid,
+                    },
+                })
+
+                hasUser = hasUserWithEmail
+            }
+        }
+
+        /**
+         * Get first name and last name from display name
+         */
+        const splitName = displayName?.split(' ')
+
+        let firstName = ''
+        let lastName = ''
+
+        if (splitName && displayName) {
+            if (splitName.length >= 2) {
+                const middleIndex = Math.floor(splitName.length / 2)
+
+                firstName = splitName.slice(0, middleIndex).join(' ')
+                lastName = splitName.slice(middleIndex).join(' ')
+            } else {
+                lastName = displayName
+            }
+        }
+
+        /**
+         * Create user if not exists
+         */
+
+        if (!hasUser) {
+            hasUser = await this.prisma.user.create({
+                data: {
+                    first_name: firstName,
+                    last_name: lastName,
+                    nickname: randomUUID(),
+                    avatar_path: photoURL,
+                    sign_in_provider: sign_in_provider as 'google' | 'github' | 'email',
+                    provider_uid: uid,
+                    password: null,
+                },
+            })
+        }
+
+        /**
+         * Generate token
+         */
+        const accessToken = this.jwtService.sign(
+            {
+                sub: hasUser.id,
+                jti: randomUUID(),
+            },
+            {
+                secret: process.env.JWT_SECRET,
+                expiresIn: process.env.ACCESS_TOKEN_EXP as StringValue,
+            },
+        )
+
+        const refreshToken = this.jwtService.sign(
+            {
+                sub: hasUser.id,
+                jti: randomUUID(),
+            },
+            {
+                secret: process.env.JWT_REFRESH_SECRET,
+                expiresIn: process.env.REFRESH_TOKEN_EXP as StringValue,
+            },
+        )
+
+        return { accessToken: accessToken, refreshToken, user: hasUser }
     }
 }
