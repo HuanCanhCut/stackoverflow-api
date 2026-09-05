@@ -1,7 +1,7 @@
-import { NestFactory } from '@nestjs/core'
-import { AppModule, ObserveInstrument } from './app.module.js'
-import { GlobalExceptionFilter } from './error/errorHanlder.js'
 import { BadRequestException, ValidationPipe } from '@nestjs/common'
+import { NestFactory } from '@nestjs/core'
+
+import { AppModule, ObserveInstrument } from './app.module.js'
 
 async function bootstrap() {
     const app = await NestFactory.create(AppModule, {
@@ -25,6 +25,8 @@ async function bootstrap() {
             },
         }),
     )
+
+    app.setGlobalPrefix('api')
 
     await app.listen(process.env.PORT ?? 8000)
 }

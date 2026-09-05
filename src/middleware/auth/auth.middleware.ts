@@ -2,7 +2,9 @@ import { Injectable, NestMiddleware, UnauthorizedException } from '@nestjs/commo
 import { JwtService } from '@nestjs/jwt'
 import type { NextFunction, Response } from 'express'
 import { Redis } from 'ioredis'
-import { JsonWebTokenError, TokenExpiredError } from 'jsonwebtoken'
+import jwt from 'jsonwebtoken'
+
+const { JsonWebTokenError, TokenExpiredError } = jwt
 
 import type { IRequest } from '../../type.js'
 
@@ -14,7 +16,7 @@ export class AuthMiddleware implements NestMiddleware {
     ) {}
 
     async use(req: IRequest, res: Response, next: NextFunction) {
-        const accessToken = req.cookies?.access_token
+        const accessToken = req.headers.authorization?.split(' ')[1]
 
         if (!accessToken) {
             throw new UnauthorizedException({

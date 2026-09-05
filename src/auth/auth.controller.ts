@@ -1,6 +1,7 @@
-import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common'
+import { Body, Controller, Get, HttpCode, HttpStatus, Post, Req } from '@nestjs/common'
 
 import { responseData } from '../schemas/response/index.js'
+import type { IRequest } from '../type.js'
 import { AuthService } from './auth.service.js'
 import { LoginDTO } from './dto/login.dto.js'
 import { LogoutDTO } from './dto/logout.dto.js'
@@ -53,5 +54,12 @@ export class AuthController {
             access_token: accessToken,
             refresh_token: refreshToken,
         })
+    }
+
+    @Get('me')
+    async getCurrentUser(@Req() req: IRequest) {
+        const user = await this.authService.getCurrentUser(req.decoded.sub)
+
+        return responseData(user)
     }
 }

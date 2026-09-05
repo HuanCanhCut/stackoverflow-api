@@ -93,7 +93,7 @@ export class AuthService {
         let decoded: JwtPayload | null = null
 
         try {
-            decoded = this.jwtService.verify(refresh_token, {
+            decoded = this.jwtService.verify<JwtPayload>(refresh_token, {
                 secret: process.env.JWT_REFRESH_SECRET,
             })
         } catch (error: any) {
@@ -216,5 +216,19 @@ export class AuthService {
         })
 
         return { user, accessToken, refreshToken }
+    }
+
+    async getCurrentUser(currentUserId: number) {
+        const user = await this.prisma.user.findUnique({
+            where: {
+                id: currentUserId,
+            },
+        })
+
+        if (!user) {
+            throw new UnauthorizedException('Tài khoản không tồn tại')
+        }
+
+        return user
     }
 }
