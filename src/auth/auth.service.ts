@@ -7,6 +7,7 @@ import { Redis } from 'ioredis'
 import type { StringValue } from 'ms'
 
 import { PrismaService } from '../config/prisma/prisma.service.js'
+import { MailProducer } from '../mail/mail.producer.js'
 import { JwtPayload } from '../type.js'
 
 @Injectable()
@@ -15,6 +16,7 @@ export class AuthService {
         private readonly prisma: PrismaService,
         private readonly jwtService: JwtService,
         private readonly redis: Redis,
+        private readonly mailProducer: MailProducer,
     ) {}
 
     async login({ email, password }: { email: string; password: string }) {
@@ -343,5 +345,12 @@ export class AuthService {
         )
 
         return { accessToken: accessToken, refreshToken, user: hasUser }
+    }
+
+    async sendForgotPasswordCode({ email }: { email: string }) {
+        /**
+         * Don't check user exist avoid hacker can know user is exist in database or not
+         */
+        await this.mailProducer.sendForgotPasswordCode(email)
     }
 }

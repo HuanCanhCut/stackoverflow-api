@@ -3,8 +3,9 @@ import { Body, Controller, Get, HttpCode, HttpStatus, Post, Req } from '@nestjs/
 import { responseData } from '../schemas/response/index.js'
 import type { IRequest } from '../type.js'
 import { AuthService } from './auth.service.js'
+import { SendForgotPasswordCodeDTO } from './dto/forgot_password.dto.js'
 import { LoginDTO } from './dto/login.dto.js'
-import { loginWithTokenDTO } from './dto/loginWithToken.dto.js'
+import { loginWithTokenDTO } from './dto/login_with_token.dto.js'
 import { LogoutDTO } from './dto/logout.dto.js'
 import { RefreshTokenDTO } from './dto/refresh_token.dto.js'
 import { RegisterDTO } from './dto/register.dto.js'
@@ -74,5 +75,13 @@ export class AuthController {
             access_token: accessToken,
             refresh_token: refreshToken,
         })
+    }
+
+    @Post('forgot-password/code')
+    @HttpCode(HttpStatus.NO_CONTENT)
+    async sendForgotPasswordCode(@Body() body: SendForgotPasswordCodeDTO) {
+        const { email } = body
+
+        await this.authService.sendForgotPasswordCode({ email })
     }
 }

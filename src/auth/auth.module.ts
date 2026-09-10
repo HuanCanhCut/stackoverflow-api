@@ -1,13 +1,13 @@
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common'
 import { JwtModule } from '@nestjs/jwt'
 
-import { RedisModule } from '../config/redis/redis.module.js'
+import { MailModule } from '../mail/mail.module.js'
 import { AuthMiddleware } from '../middleware/auth/auth.middleware.js'
 import { AuthController } from './auth.controller.js'
 import { AuthService } from './auth.service.js'
 
 @Module({
-    imports: [RedisModule, JwtModule],
+    imports: [JwtModule, MailModule],
     controllers: [AuthController],
     providers: [AuthService, AuthMiddleware],
 })

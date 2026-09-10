@@ -1,0 +1,4 @@
+export enum QueueEnum {
+    MAIL = 'MAIL',
+    SEND_FORGOT_PASSWORD_CODE = 'SEND_FORGOT_PASSWORD_CODE',
+}
