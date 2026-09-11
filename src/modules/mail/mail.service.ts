@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common'
 import { MailerService } from '@nestjs-modules/mailer'
 import { Redis } from 'ioredis'
+import moment from 'moment-timezone'
 
 @Injectable()
 export class MailService {
@@ -51,7 +52,10 @@ export class MailService {
 
         await this.redis.set(
             `reset_password_code:${verificationCode}`,
-            email,
+            JSON.stringify({
+                email,
+                created_at: moment.tz(new Date(), 'Asia/Ho_Chi_Minh').format(),
+            }),
             'EX',
             Number(process.env.RESET_PASSWORD_CODE_TTL),
         )

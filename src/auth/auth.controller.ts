@@ -1,9 +1,10 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Post, Req } from '@nestjs/common'
+import { seconds, Throttle } from '@nestjs/throttler'
 
 import { responseData } from '../schemas/response/index.js'
 import type { IRequest } from '../type.js'
 import { AuthService } from './auth.service.js'
-import { SendForgotPasswordCodeDTO } from './dto/forgot_password.dto.js'
+import { ResetPasswordDTO, SendForgotPasswordCodeDTO } from './dto/forgot_password.dto.js'
 import { LoginDTO } from './dto/login.dto.js'
 import { loginWithTokenDTO } from './dto/login_with_token.dto.js'
 import { LogoutDTO } from './dto/logout.dto.js'
@@ -77,11 +78,26 @@ export class AuthController {
         })
     }
 
+    // Rate limit 1 req/minute
+    @Throttle({
+        default: {
+            limit: 1,
+            ttl: seconds(60),
+        },
+    })
     @Post('forgot-password/code')
     @HttpCode(HttpStatus.NO_CONTENT)
     async sendForgotPasswordCode(@Body() body: SendForgotPasswordCodeDTO) {
         const { email } = body
 
         await this.authService.sendForgotPasswordCode({ email })
+    }
+
+    @Post('reset-password')
+    @HttpCode(HttpStatus.NO_CONTENT)
+    async resetPassword(@Body() body: ResetPasswordDTO) {
+        const { email, code, password } = body
+
+        await this.authService.resetPassword({ email, code, password })
     }
 }

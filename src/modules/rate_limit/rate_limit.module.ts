@@ -1,0 +1,21 @@
+import { Module } from '@nestjs/common'
+import { APP_GUARD } from '@nestjs/core'
+import { seconds, ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler'
+
+@Module({
+    imports: [
+        ThrottlerModule.forRoot([
+            {
+                ttl: seconds(60),
+                limit: 100,
+            },
+        ]),
+    ],
+    providers: [
+        {
+            provide: APP_GUARD,
+            useClass: ThrottlerGuard,
+        },
+    ],
+})
+export class RateLimitModule {}

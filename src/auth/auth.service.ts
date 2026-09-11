@@ -158,8 +158,8 @@ export class AuthService {
     }
 
     async register({ email, password, full_name }: { email: string; password: string; full_name: string }) {
-        const salt = await bcrypt.genSalt(12)
-        const passwordHashed = await bcrypt.hash(password, salt)
+        const SALT_ROUND = 10
+        const passwordHashed = await bcrypt.hash(password, SALT_ROUND)
 
         const splitName = full_name.trim().split(' ')
 
@@ -351,6 +351,42 @@ export class AuthService {
         /**
          * Don't check user exist avoid hacker can know user is exist in database or not
          */
+
         await this.mailProducer.sendForgotPasswordCode(email)
+    }
+
+    async resetPassword({ email, password, code }: { email: string; password: string; code: number }) {
+        const isValidCode = await this.redis.get(`reset_password_code:${code}`)
+
+        if (!isValidCode) {
+            throw new BadRequestException('Mã xác thực không đúng')
+        }
+
+        const decodedResetCode: { email: string; created_at: string } = JSON.parse(isValidCode)
+
+        if (decodedResetCode.email !== email) {
+            throw new BadRequestException('Mã xác thực không đúng')
+        }
+
+        const SALT_ROUND = 10
+
+        const passwordHashed = await bcrypt.hash(password, SALT_ROUND)
+
+        /**
+         * Update user
+         */
+        await this.prisma.user.update({
+            where: {
+                email,
+            },
+            data: {
+                password: passwordHashed,
+            },
+        })
+
+        /**
+         * Clear reset password code
+         */
+        await this.redis.del(`reset_password_code:${code}`)
     }
 }

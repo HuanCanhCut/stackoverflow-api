@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common'
 import { ConfigModule, ConfigService } from '@nestjs/config'
 import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core'
-import { JwtModule } from '@nestjs/jwt'
 import { createObserveModule } from '@nestjs/observe'
 
 import { AppController } from './app.controller.js'
@@ -10,8 +9,10 @@ import { HttpLoggingInterceptor } from './common/interceptors/http-logging.inter
 import { PrismaModule } from './config/prisma/prisma.module.js'
 import { RedisModule } from './config/redis/redis.module.js'
 import { GlobalExceptionFilter } from './error/errorHanlder.js'
+import { JwtTokenModule } from './modules/jwt/jwt.module.js'
 import { MailModule } from './modules/mail/mail.module.js'
 import { NodemailerModule } from './modules/nodemailer/nodemailer.module.js'
+import { RateLimitModule } from './modules/rate_limit/rate_limit.module.js'
 import { QueueModule } from './queue/queue.module.js'
 
 export const { ObserveModule, ObserveInstrument } = createObserveModule()
@@ -39,16 +40,8 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule()
         PrismaModule,
         QueueModule,
         NodemailerModule,
-        JwtModule.registerAsync({
-            global: true,
-            inject: [ConfigService],
-            useFactory: (configService: ConfigService) => ({
-                secret: configService.getOrThrow<string>('JWT_SECRET'),
-                signOptions: {
-                    expiresIn: '60s',
-                },
-            }),
-        }),
+        RateLimitModule,
+        JwtTokenModule,
         MailModule,
     ],
 
