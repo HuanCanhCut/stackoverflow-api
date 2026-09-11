@@ -78,10 +78,9 @@ export class AuthController {
         })
     }
 
-    // Rate limit 1 req/minute
     @Throttle({
         default: {
-            limit: 1,
+            limit: 10, // 1 ip 10 req/minute, limit email 1 req/minute in service
             ttl: seconds(60),
         },
     })

@@ -1,4 +1,11 @@
-import { BadRequestException, ConflictException, Injectable, UnauthorizedException } from '@nestjs/common'
+import {
+    BadRequestException,
+    ConflictException,
+    HttpException,
+    HttpStatus,
+    Injectable,
+    UnauthorizedException,
+} from '@nestjs/common'
 import { JwtService } from '@nestjs/jwt'
 import bcrypt from 'bcrypt'
 import { randomUUID } from 'crypto'
@@ -348,6 +355,25 @@ export class AuthService {
     }
 
     async sendForgotPasswordCode({ email }: { email: string }) {
+        const normalizedEmail = email.trim().toLowerCase()
+
+        const key = `forgot-password:cooldown:${normalizedEmail}`
+
+        const created = await this.redis.set(key, '1', 'EX', 60, 'NX')
+
+        if (!created) {
+            const ttl = await this.redis.ttl(key)
+
+            throw new HttpException(
+                {
+                    code: 'FORGOT_PASSWORD_CODE_COOLDOWN',
+                    message: `Quá nhiều yêu cầu. Vui lòng thử lại sau ${ttl} giây`,
+                    retry_after: ttl,
+                },
+                HttpStatus.TOO_MANY_REQUESTS,
+            )
+        }
+
         /**
          * Don't check user exist avoid hacker can know user is exist in database or not
          */
