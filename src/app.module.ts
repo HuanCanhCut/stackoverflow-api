@@ -10,8 +10,9 @@ import { HttpLoggingInterceptor } from './common/interceptors/http-logging.inter
 import { PrismaModule } from './config/prisma/prisma.module.js'
 import { RedisModule } from './config/redis/redis.module.js'
 import { GlobalExceptionFilter } from './error/errorHanlder.js'
+import { MailModule } from './modules/mail/mail.module.js'
+import { NodemailerModule } from './modules/nodemailer/nodemailer.module.js'
 import { QueueModule } from './queue/queue.module.js'
-import { MailModule } from './mail/mail.module.js';
 
 export const { ObserveModule, ObserveInstrument } = createObserveModule()
 
@@ -37,6 +38,7 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule()
         RedisModule,
         PrismaModule,
         QueueModule,
+        NodemailerModule,
         JwtModule.registerAsync({
             global: true,
             inject: [ConfigService],

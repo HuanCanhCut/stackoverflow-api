@@ -3,7 +3,7 @@ import { InjectQueue } from '@nestjs/bullmq'
 import { Injectable } from '@nestjs/common'
 import { Queue } from 'bullmq'
 
-import { QueueEnum } from '../queue/queue.enum.js'
+import { QueueEnum } from '../../queue/queue.enum.js'
 
 @Injectable()
 export class MailProducer {

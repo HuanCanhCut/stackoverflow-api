@@ -1,7 +1,7 @@
 import { BullModule } from '@nestjs/bullmq'
 import { Module } from '@nestjs/common'
 
-import { QueueEnum } from '../queue/queue.enum.js'
+import { QueueEnum } from '../../queue/queue.enum.js'
 import { MailProcessor } from './mail.processor.js'
 import { MailProducer } from './mail.producer.js'
 import { MailService } from './mail.service.js'

@@ -7,7 +7,7 @@ import { Redis } from 'ioredis'
 import type { StringValue } from 'ms'
 
 import { PrismaService } from '../config/prisma/prisma.service.js'
-import { MailProducer } from '../mail/mail.producer.js'
+import { MailProducer } from '../modules/mail/mail.producer.js'
 import { JwtPayload } from '../type.js'
 
 @Injectable()
