@@ -1,5 +1,6 @@
 import { BadRequestException, ValidationPipe } from '@nestjs/common'
 import { NestFactory } from '@nestjs/core'
+import { NestExpressApplication } from '@nestjs/platform-express'
 import { cert, initializeApp } from 'firebase-admin/app'
 
 import { AppModule, ObserveInstrument } from './app.module.js'
@@ -13,7 +14,7 @@ initializeApp({
 })
 
 async function bootstrap() {
-    const app = await NestFactory.create(AppModule, {
+    const app = await NestFactory.create<NestExpressApplication>(AppModule, {
         instrument: ObserveInstrument,
     })
 
@@ -36,6 +37,7 @@ async function bootstrap() {
     )
 
     app.setGlobalPrefix('api')
+    app.set('trust proxy', 'loopback') // Trust requests from the loopback address
 
     await app.listen(process.env.PORT ?? 8000)
 }
