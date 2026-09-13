@@ -11,7 +11,7 @@ enum EnumSignInProvider {
 
 model User {
   id               Int                @id @default(autoincrement())
-  email            String?             @unique
+  email            String?            @unique
   password         String?
   first_name       String?
   last_name        String?
@@ -28,6 +28,7 @@ model User {
   blocked_by       Int?
   blocked_by_user  User?              @relation("UserBlockedBy", fields: [blocked_by], references: [id], onDelete: SetNull, onUpdate: Cascade)
   blocked_users    User[]             @relation("UserBlockedBy")
+  questions        Question[]         @relation("author")
   refresh_tokens   RefreshToken[]
   created_at       DateTime           @default(now())
   updated_at       DateTime           @updatedAt

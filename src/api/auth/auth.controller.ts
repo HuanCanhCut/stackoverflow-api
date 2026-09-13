@@ -1,8 +1,8 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Post, Req } from '@nestjs/common'
 import { seconds, Throttle } from '@nestjs/throttler'
 
-import { responseData } from '../schemas/response/index.js'
-import type { IRequest } from '../type.js'
+import { responseData } from '../../schemas/response/index.js'
+import type { IRequest } from '../../type.js'
 import { AuthService } from './auth.service.js'
 import { ResetPasswordDTO, SendForgotPasswordCodeDTO } from './dto/forgot_password.dto.js'
 import { LoginDTO } from './dto/login.dto.js'

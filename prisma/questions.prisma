@@ -1,0 +1,13 @@
+model Question {
+  id         Int           @id @default(autoincrement())
+  title      String        @db.VarChar(255)
+  body       String        @db.Text
+  author_id  Int
+  author     User          @relation("author", fields: [author_id], references: [id], onUpdate: Cascade, onDelete: Cascade)
+  tags       QuestionTag[]
+  votes      Int           @default(0)
+  created_at DateTime      @default(now())
+  updated_at DateTime      @updatedAt
+
+  @@map("questions")
+}

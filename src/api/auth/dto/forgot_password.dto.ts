@@ -1,6 +1,6 @@
-import { IsEmail, IsNotEmpty, IsNumber, IsString, Length } from 'class-validator'
+import { IsEmail, IsNotEmpty, IsNumber, IsString, Length, Max, Min } from 'class-validator'
 
-import { AuthEnum } from '../../enum/auth.enum.js'
+import { AuthEnum } from '../../../enum/auth.enum.js'
 
 export class SendForgotPasswordCodeDTO {
     @IsEmail({}, { message: 'Email không đúng định dạng' })
@@ -18,8 +18,9 @@ export class ResetPasswordDTO {
     })
     password: string
 
-    @IsNumber()
-    @IsNotEmpty()
-    @Length(6, 6, { message: 'Mã xác nhận phải có 6 ký tự' })
+    @IsNumber({}, { message: 'Mã xác nhận phải là số' })
+    @IsNotEmpty({ message: 'Mã xác nhận không được để trống' })
+    @Min(100000, { message: 'Mã xác nhận phải có 6 ký tự' })
+    @Max(999999, { message: 'Mã xác nhận phải có 6 ký tự' })
     code: number
 }

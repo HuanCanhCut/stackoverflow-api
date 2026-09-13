@@ -1,6 +1,6 @@
 import { IsEmail, IsNotEmpty, IsString, Length, Matches } from 'class-validator'
 
-import { AuthEnum } from '../../enum/auth.enum.js'
+import { AuthEnum } from '../../../enum/auth.enum.js'
 
 export class RegisterDTO {
     @IsString({ message: 'Email phải là chuỗi' })

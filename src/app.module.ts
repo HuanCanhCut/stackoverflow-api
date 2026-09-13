@@ -3,8 +3,9 @@ import { ConfigModule, ConfigService } from '@nestjs/config'
 import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core'
 import { createObserveModule } from '@nestjs/observe'
 
+import { AuthModule } from './api/auth/auth.module.js'
+import { QuestionsModule } from './api/questions/questions.module.js'
 import { AppController } from './app.controller.js'
-import { AuthModule } from './auth/auth.module.js'
 import { HttpLoggingInterceptor } from './common/interceptors/http-logging.interceptor.js'
 import { PrismaModule } from './config/prisma/prisma.module.js'
 import { RedisModule } from './config/redis/redis.module.js'
@@ -43,6 +44,7 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule()
         RateLimitModule,
         JwtTokenModule,
         MailModule,
+        QuestionsModule,
     ],
 
     controllers: [AppController],

@@ -4,9 +4,9 @@ model RefreshToken {
   token      String   @unique @db.VarChar(255)
   jti        String   @unique
   created_at DateTime @default(now())
-  updated_at DateTime @updatedAt @default(now())
+  updated_at DateTime @default(now()) @updatedAt
 
-  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
   @@index([user_id, token])
   @@map("refresh_tokens")

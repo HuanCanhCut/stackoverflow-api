@@ -13,9 +13,9 @@ import { getAuth } from 'firebase-admin/auth'
 import { Redis } from 'ioredis'
 import type { StringValue } from 'ms'
 
-import { PrismaService } from '../config/prisma/prisma.service.js'
-import { MailProducer } from '../modules/mail/mail.producer.js'
-import { JwtPayload } from '../type.js'
+import { PrismaService } from '../../config/prisma/prisma.service.js'
+import { MailProducer } from '../../modules/mail/mail.producer.js'
+import { JwtPayload } from '../../type.js'
 
 @Injectable()
 export class AuthService {

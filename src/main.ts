@@ -2,6 +2,7 @@ import { BadRequestException, ValidationPipe } from '@nestjs/common'
 import { NestFactory } from '@nestjs/core'
 import { NestExpressApplication } from '@nestjs/platform-express'
 import { cert, initializeApp } from 'firebase-admin/app'
+import helmet from 'helmet'
 
 import { AppModule, ObserveInstrument } from './app.module.js'
 
@@ -38,6 +39,8 @@ async function bootstrap() {
 
     app.setGlobalPrefix('api')
     app.set('trust proxy', 'loopback') // Trust requests from the loopback address
+
+    app.use(helmet())
 
     await app.listen(process.env.PORT ?? 8000)
 }

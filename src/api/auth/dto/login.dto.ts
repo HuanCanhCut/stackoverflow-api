@@ -1,6 +1,6 @@
 import { IsEmail, IsNotEmpty, IsString, Length } from 'class-validator'
 
-import { AuthEnum } from '../../enum/auth.enum.js'
+import { AuthEnum } from '../../../enum/auth.enum.js'
 
 export class LoginDTO {
     @IsNotEmpty({ message: 'Email không được để trống' })
