@@ -1,7 +1,6 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Post, Req } from '@nestjs/common'
 import { seconds, Throttle } from '@nestjs/throttler'
 
-import { responseData } from '../../schemas/response/index.js'
 import type { IRequest } from '../../type.js'
 import { AuthService } from './auth.service.js'
 import { ResetPasswordDTO, SendForgotPasswordCodeDTO } from './dto/forgot_password.dto.js'
@@ -22,10 +21,13 @@ export class AuthController {
             password: body.password,
         })
 
-        return responseData(user, {
-            access_token: accessToken,
-            refresh_token: refreshToken,
-        })
+        return {
+            data: user,
+            meta: {
+                access_token: accessToken,
+                refresh_token: refreshToken,
+            },
+        }
     }
 
     @Post('logout')
@@ -39,10 +41,13 @@ export class AuthController {
     async refreshToken(@Body() body: RefreshTokenDTO) {
         const { accessToken, refreshToken } = await this.authService.refreshToken({ refresh_token: body.refresh_token })
 
-        return responseData(null, {
-            access_token: accessToken,
-            refresh_token: refreshToken,
-        })
+        return {
+            data: null,
+            meta: {
+                access_token: accessToken,
+                refresh_token: refreshToken,
+            },
+        }
     }
 
     @Post('register')
@@ -53,17 +58,20 @@ export class AuthController {
             full_name: body.full_name,
         })
 
-        return responseData(user, {
-            access_token: accessToken,
-            refresh_token: refreshToken,
-        })
+        return {
+            data: user,
+            meta: {
+                access_token: accessToken,
+                refresh_token: refreshToken,
+            },
+        }
     }
 
     @Get('me')
     async getCurrentUser(@Req() req: IRequest) {
         const user = await this.authService.getCurrentUser(req.decoded.sub)
 
-        return responseData(user)
+        return user
     }
 
     @Post('login-with-token')
@@ -72,10 +80,13 @@ export class AuthController {
 
         const { accessToken, refreshToken, user } = await this.authService.loginWithToken(token)
 
-        return responseData(user, {
-            access_token: accessToken,
-            refresh_token: refreshToken,
-        })
+        return {
+            data: user,
+            meta: {
+                access_token: accessToken,
+                refresh_token: refreshToken,
+            },
+        }
     }
 
     @Throttle({

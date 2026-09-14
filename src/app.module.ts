@@ -7,6 +7,7 @@ import { AuthModule } from './api/auth/auth.module.js'
 import { QuestionsModule } from './api/questions/questions.module.js'
 import { AppController } from './app.controller.js'
 import { HttpLoggingInterceptor } from './common/interceptors/http-logging.interceptor.js'
+import { ResponseInterceptor } from './common/interceptors/response.interceptor.js'
 import { PrismaModule } from './config/prisma/prisma.module.js'
 import { RedisModule } from './config/redis/redis.module.js'
 import { GlobalExceptionFilter } from './error/errorHanlder.js'
@@ -52,6 +53,10 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule()
         {
             provide: APP_INTERCEPTOR,
             useClass: HttpLoggingInterceptor,
+        },
+        {
+            provide: APP_INTERCEPTOR,
+            useClass: ResponseInterceptor,
         },
         {
             provide: APP_FILTER,

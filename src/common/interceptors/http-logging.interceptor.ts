@@ -1,7 +1,7 @@
 import { CallHandler, ExecutionContext, Injectable, Logger, NestInterceptor } from '@nestjs/common'
 import type { Request, Response } from 'express'
-import type { Observable } from 'rxjs'
 import pc from 'picocolors'
+import type { Observable } from 'rxjs'
 
 @Injectable()
 export class HttpLoggingInterceptor implements NestInterceptor {

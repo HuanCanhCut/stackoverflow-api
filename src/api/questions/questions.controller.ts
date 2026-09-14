@@ -1,6 +1,5 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Req, UnauthorizedException } from '@nestjs/common'
 
-import { responseData } from '../../schemas/response/index.js'
 import type { IRequest } from '../../type.js'
 import { CreateQuestionDto } from './dto/create-question.dto.js'
 import { UpdateQuestionDto } from './dto/update-question.dto.js'
@@ -18,9 +17,7 @@ export class QuestionsController {
             throw new UnauthorizedException()
         }
 
-        const createdQuestion = await this.questionsService.create(createQuestionDto, decoded.sub)
-
-        return responseData(createdQuestion)
+        return this.questionsService.create(createQuestionDto, decoded.sub)
     }
 
     @Get()
@@ -41,9 +38,7 @@ export class QuestionsController {
             throw new UnauthorizedException()
         }
 
-        const updatedQuestion = await this.questionsService.update(+id, updateQuestionDto)
-
-        return responseData(updatedQuestion)
+        return this.questionsService.update(+id, updateQuestionDto)
     }
 
     @Delete(':id')
