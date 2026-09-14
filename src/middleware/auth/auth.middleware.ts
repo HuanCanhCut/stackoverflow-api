@@ -1,21 +1,15 @@
 import { Injectable, NestMiddleware, UnauthorizedException } from '@nestjs/common'
-import { JwtService } from '@nestjs/jwt'
 import type { NextFunction, Response } from 'express'
 import { Redis } from 'ioredis'
-import jwt from 'jsonwebtoken'
-
-const { JsonWebTokenError, TokenExpiredError } = jwt
 
 import type { IRequest } from '../../type.js'
+import decodedToken from '../../utils/jwt.util.js'
 
 @Injectable()
 export class AuthMiddleware implements NestMiddleware {
-    constructor(
-        private readonly redis: Redis,
-        private readonly jwtService: JwtService,
-    ) {}
+    constructor(private readonly redis: Redis) {}
 
-    async use(req: IRequest, res: Response, next: NextFunction) {
+    async use(req: IRequest, _res: Response, next: NextFunction) {
         const accessToken = req.headers.authorization?.split(' ')[1]
 
         if (!accessToken) {
@@ -34,29 +28,16 @@ export class AuthMiddleware implements NestMiddleware {
             })
         }
 
-        try {
-            const decodedToken = this.jwtService.verify(accessToken, {
-                secret: process.env.JWT_SECRET,
+        const payload = decodedToken(accessToken)
+
+        if (!payload) {
+            throw new UnauthorizedException({
+                message: 'Access token không hợp lệ',
+                code: 'TOKEN_VERIFICATION_FAILED',
             })
-
-            req.decoded = decodedToken
-        } catch (error) {
-            if (error instanceof TokenExpiredError) {
-                return res.status(401).set('x-refresh-token-required', 'true').json({
-                    error: 'Xác thực thất bại do token hết hạn.',
-                    code: 'TOKEN_EXPIRED',
-                })
-            }
-
-            if (error instanceof JsonWebTokenError) {
-                throw new UnauthorizedException({
-                    message: 'Access token không hợp lệ',
-                    code: 'TOKEN_VERIFICATION_FAILED',
-                })
-            }
-
-            throw error
         }
+
+        req.decoded = payload
 
         next()
     }
