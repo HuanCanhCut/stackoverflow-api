@@ -1,0 +1,30 @@
+info:
+  name: "[Auth] Get presigned URL"
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{API_ENDPOINT}}/uploads/s3/presigned-url"
+  headers:
+    - name: Authorization
+      value: Bearer {{ACCESS_TOKEN}}
+  body:
+    type: json
+    data: |-
+      {
+        "files": [
+          {
+            "folder": "questions",
+            "content_type": "image/png"
+          }
+        ]
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

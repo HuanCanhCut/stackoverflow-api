@@ -12,7 +12,7 @@ http:
       - name: email
         value: tronghuanxxx@gmail.com
       - name: password
-        value: "12345678"
+        value: "123456"
   auth: inherit
 
 settings:

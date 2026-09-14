@@ -5,11 +5,13 @@ import { createObserveModule } from '@nestjs/observe'
 
 import { AuthModule } from './api/auth/auth.module.js'
 import { QuestionsModule } from './api/questions/questions.module.js'
+import { UploadsModule } from './api/uploads/uploads.module.js'
 import { AppController } from './app.controller.js'
 import { HttpLoggingInterceptor } from './common/interceptors/http-logging.interceptor.js'
 import { ResponseInterceptor } from './common/interceptors/response.interceptor.js'
 import { PrismaModule } from './config/prisma/prisma.module.js'
 import { RedisModule } from './config/redis/redis.module.js'
+import { S3Module } from './config/s3/s3.module.js'
 import { GlobalExceptionFilter } from './error/errorHanlder.js'
 import { JwtTokenModule } from './modules/jwt/jwt.module.js'
 import { MailModule } from './modules/mail/mail.module.js'
@@ -40,12 +42,14 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule()
         AuthModule,
         RedisModule,
         PrismaModule,
+        S3Module,
         QueueModule,
         NodemailerModule,
         RateLimitModule,
         JwtTokenModule,
         MailModule,
         QuestionsModule,
+        UploadsModule,
     ],
 
     controllers: [AppController],

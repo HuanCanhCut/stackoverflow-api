@@ -1,4 +1,4 @@
-import { BadRequestException, ValidationPipe } from '@nestjs/common'
+import { BadRequestException, ValidationError, ValidationPipe } from '@nestjs/common'
 import { NestFactory } from '@nestjs/core'
 import { NestExpressApplication } from '@nestjs/platform-express'
 import { cert, initializeApp } from 'firebase-admin/app'
@@ -14,31 +14,52 @@ initializeApp({
     }),
 })
 
+const flattenValidationErrors = (
+    errors: ValidationError[],
+    parentPath = '',
+): {
+    field: string
+    messages: string[]
+}[] => {
+    return errors.flatMap((error) => {
+        const field = parentPath ? `${parentPath}.${error.property}` : error.property
+
+        const currentErrors = error.constraints
+            ? [
+                  {
+                      field,
+                      messages: Object.values(error.constraints),
+                  },
+              ]
+            : []
+
+        const childErrors = error.children?.length ? flattenValidationErrors(error.children, field) : []
+
+        return [...currentErrors, ...childErrors]
+    })
+}
+
 async function bootstrap() {
     const app = await NestFactory.create<NestExpressApplication>(AppModule, {
         instrument: ObserveInstrument,
     })
 
-    // format validation error to snake case
     app.useGlobalPipes(
         new ValidationPipe({
             whitelist: true,
-
+            transform: true,
             exceptionFactory(errors) {
                 return new BadRequestException({
                     code: 'VALIDATION_ERROR',
-
-                    errors: errors.map((error) => ({
-                        field: error.property,
-                        messages: Object.values(error.constraints ?? {}),
-                    })),
+                    errors: flattenValidationErrors(errors),
                 })
             },
         }),
     )
 
     app.setGlobalPrefix('api')
-    app.set('trust proxy', 'loopback') // Trust requests from the loopback address
+
+    app.set('trust proxy', 'loopback')
 
     app.use(helmet())
 

@@ -1,0 +1,19 @@
+info:
+  name: "[Auth] Delete question"
+  type: http
+  seq: 3
+
+http:
+  method: DELETE
+  url: "{{API_ENDPOINT}}/questions/1"
+  headers:
+    - name: Authorization
+      value: Bearer {{ACCESS_TOKEN}}
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

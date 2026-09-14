@@ -1,0 +1,55 @@
+info:
+  name: Upload to s3
+  type: http
+  seq: 2
+
+http:
+  method: PUT
+  url: https://h9n.3b496d17a2cc0c83222061736315d179.r2.cloudflarestorage.com/questions/1-441c55f5-0c2a-4a5e-8fca-1ae6960ebc39.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=bcbeca1df73774d8d3e6f91568d210e4%2F20260914%2Fauto%2Fs3%2Faws4_request&X-Amz-Date=20260914T164054Z&X-Amz-Expires=3600&X-Amz-Signature=a6485c47ca4a3bbe4117f0966fb0de2b80960efb9f94845d2efd3ac29470dbcd&X-Amz-SignedHeaders=host&x-amz-checksum-crc32=AAAAAA%3D%3D&x-amz-sdk-checksum-algorithm=CRC32&x-id=PutObject
+  headers:
+    - name: Content-Type
+      value: image/png
+  params:
+    - name: X-Amz-Algorithm
+      value: AWS4-HMAC-SHA256
+      type: query
+    - name: X-Amz-Content-Sha256
+      value: UNSIGNED-PAYLOAD
+      type: query
+    - name: X-Amz-Credential
+      value: bcbeca1df73774d8d3e6f91568d210e4%2F20260914%2Fauto%2Fs3%2Faws4_request
+      type: query
+    - name: X-Amz-Date
+      value: 20260914T164054Z
+      type: query
+    - name: X-Amz-Expires
+      value: "3600"
+      type: query
+    - name: X-Amz-Signature
+      value: a6485c47ca4a3bbe4117f0966fb0de2b80960efb9f94845d2efd3ac29470dbcd
+      type: query
+    - name: X-Amz-SignedHeaders
+      value: host
+      type: query
+    - name: x-amz-checksum-crc32
+      value: AAAAAA%3D%3D
+      type: query
+    - name: x-amz-sdk-checksum-algorithm
+      value: CRC32
+      type: query
+    - name: x-id
+      value: PutObject
+      type: query
+  body:
+    type: file
+    data:
+      - filePath: C:\Users\huanpenguin\Pictures\Screenshots\Screenshot 2026-09-13 143410.png
+        contentType: image/png
+        selected: true
+
+settings:
+  encodeUrl: false
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

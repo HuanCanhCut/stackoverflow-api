@@ -1,0 +1,34 @@
+info:
+  name: "[Auth] Create question"
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{API_ENDPOINT}}/questions"
+  headers:
+    - name: Authorization
+      value: Bearer {{ACCESS_TOKEN}}
+  body:
+    type: json
+    data: |-
+      {
+        "title": "Làm thế nào để cấu hình NestJS với Prisma?",
+        "body": "Tôi đang tìm hiểu NestJS và muốn kết nối với cơ sở dữ liệu PostgreSQL thông qua Prisma ORM.",
+        "tags": [
+          {
+            "name": "nestjs"
+          },
+          {
+            "name": "prisma"
+          }
+        ]
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

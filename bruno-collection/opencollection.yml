@@ -2,6 +2,22 @@ opencollection: 1.0.0
 
 info:
   name: Stackoverflow
+config:
+  proxy:
+    inherit: true
+    config:
+      protocol: http
+      hostname: ""
+      port: ""
+      auth:
+        username: ""
+        password: ""
+      bypassProxy: ""
+
+request:
+  auth:
+    type: bearer
+    token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjEsImp0aSI6IjlhYWEzMzZiLTZhMGEtNDE5OC1iOWI3LTRjMmE0ZTliMjMzZSIsImlhdCI6MTc4OTQwNDA0MiwiZXhwIjoxNzg5NDkwNDQyfQ.9NFv3fhbMNyzNwGEH8NVIKk-Zrtffi92SbIGopQ44rI
 bundled: false
 extensions:
   bruno:
