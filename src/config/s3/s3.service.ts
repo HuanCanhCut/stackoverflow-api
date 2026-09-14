@@ -17,8 +17,6 @@ export class S3Service implements OnModuleInit {
     private readonly bucketName = process.env.S3_BUCKET_NAME || 'h-nine-n'
 
     async onModuleInit() {
-        console.log(process.env.S3_ENDPOINT)
-
         await this.initializeBucket()
     }
 

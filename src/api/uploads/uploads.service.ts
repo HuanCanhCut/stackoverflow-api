@@ -66,13 +66,13 @@ export class UploadsService {
         return Promise.all(promises)
     }
 
-    async verifyUploadId({
+    private async verifyUploadId({
         uploadId,
         currentUserId,
         folder,
     }: {
         uploadId: string
-        currentUserId: string
+        currentUserId: number
         folder: S3Folder
     }) {
         const uploadCache = await this.redis.get(`s3_upload_id:${uploadId}`)
@@ -104,5 +104,25 @@ export class UploadsService {
         }
 
         return uploadInfo.object_key
+    }
+
+    async verifyUploadIds({
+        uploadIds,
+        currentUserId,
+        folder,
+    }: {
+        uploadIds: string[]
+        currentUserId: number
+        folder: S3Folder
+    }) {
+        return Promise.all(
+            uploadIds.map((uploadId) =>
+                this.verifyUploadId({
+                    uploadId,
+                    currentUserId,
+                    folder,
+                }),
+            ),
+        )
     }
 }
