@@ -1,10 +1,16 @@
 import { CallHandler, ExecutionContext, Injectable, NestInterceptor } from '@nestjs/common'
 import { Reflector } from '@nestjs/core'
-import type { Request } from 'express'
+import type { Request, Response } from 'express'
 import type { Observable } from 'rxjs'
 import { map } from 'rxjs'
 
-import { RESPONSE_TYPE_METADATA, ResponseType } from '../response/response.constants.js'
+import {
+    RESPONSE_STATUS_BY_CODE,
+    RESPONSE_STATUS_METADATA,
+    RESPONSE_TYPE_METADATA,
+    type MappedResponseStatus,
+    ResponseType,
+} from '../response/response.constants.js'
 import type {
     ApiResponse,
     CursorPaginationInput,
@@ -15,6 +21,10 @@ import type {
 
 type ResponseRequest = Pick<Request, 'get' | 'originalUrl' | 'protocol'>
 type RecordValue = Record<string, unknown>
+type ExistingApiResponse = RecordValue & {
+    data: unknown
+    meta?: unknown
+}
 
 @Injectable()
 export class ResponseInterceptor implements NestInterceptor {
@@ -25,43 +35,64 @@ export class ResponseInterceptor implements NestInterceptor {
             return next.handle()
         }
 
+        const metadataTargets = [context.getHandler(), context.getClass()]
         const responseType =
-            this.reflector.getAllAndOverride<ResponseType>(RESPONSE_TYPE_METADATA, [
-                context.getHandler(),
-                context.getClass(),
-            ]) ?? ResponseType.Default
+            this.reflector.getAllAndOverride<ResponseType>(RESPONSE_TYPE_METADATA, metadataTargets) ??
+            ResponseType.Default
+        const responseStatus = this.reflector.getAllAndOverride<string>(RESPONSE_STATUS_METADATA, metadataTargets)
         const request = context.switchToHttp().getRequest<ResponseRequest>()
+        const response = context.switchToHttp().getResponse<Pick<Response, 'statusCode'>>()
 
-        return next.handle().pipe(map((value: unknown) => this.transform(value, responseType, request)))
+        return next
+            .handle()
+            .pipe(
+                map((value: unknown) =>
+                    this.transform(value, responseType, request, response.statusCode, responseStatus),
+                ),
+            )
     }
 
-    private transform(value: unknown, responseType: ResponseType, request: ResponseRequest): unknown {
+    private transform(
+        value: unknown,
+        responseType: ResponseType,
+        request: ResponseRequest,
+        statusCode: number,
+        responseStatus?: string,
+    ): unknown {
+        const status = responseStatus ?? this.getResponseStatus(statusCode)
+
         if (this.isApiResponse(value)) {
-            return value
+            return this.normalizeApiResponse(value, statusCode, status)
         }
 
         switch (responseType) {
             case ResponseType.Pagination:
-                return this.toPagePaginationResponse(value, request)
+                return this.toPagePaginationResponse(value, request, statusCode, status)
 
             case ResponseType.CursorPagination:
-                return this.toCursorPaginationResponse(value, request)
+                return this.toCursorPaginationResponse(value, request, statusCode, status)
 
             case ResponseType.Default:
-                return this.toDefaultResponse(value)
+                return this.toDefaultResponse(value, statusCode, status)
         }
     }
 
-    private toDefaultResponse(value: unknown): ApiResponse {
+    private toDefaultResponse(value: unknown, statusCode: number, status: string): ApiResponse {
         return {
             data: value ?? null,
-            meta: null,
+            status_code: statusCode,
+            status,
         }
     }
 
-    private toPagePaginationResponse(value: unknown, request: ResponseRequest): PagePaginationResponse | ApiResponse {
+    private toPagePaginationResponse(
+        value: unknown,
+        request: ResponseRequest,
+        statusCode: number,
+        status: string,
+    ): PagePaginationResponse | ApiResponse {
         if (!this.isPagePaginationInput(value)) {
-            return this.toDefaultResponse(value)
+            return this.toDefaultResponse(value, statusCode, status)
         }
 
         const { data, total, count, current_page, per_page, ...additionalMeta } = value
@@ -70,6 +101,8 @@ export class ResponseInterceptor implements NestInterceptor {
 
         return {
             data: data ?? null,
+            status_code: statusCode,
+            status,
             meta: {
                 ...additionalMeta,
                 pagination: {
@@ -101,9 +134,11 @@ export class ResponseInterceptor implements NestInterceptor {
     private toCursorPaginationResponse(
         value: unknown,
         request: ResponseRequest,
+        statusCode: number,
+        status: string,
     ): CursorPaginationResponse | ApiResponse {
         if (!this.isCursorPaginationInput(value)) {
-            return this.toDefaultResponse(value)
+            return this.toDefaultResponse(value, statusCode, status)
         }
 
         const { data, limit, next_cursor, ...additionalMeta } = value
@@ -111,6 +146,8 @@ export class ResponseInterceptor implements NestInterceptor {
 
         return {
             data: data ?? null,
+            status_code: statusCode,
+            status,
             meta: {
                 ...additionalMeta,
                 pagination: {
@@ -146,8 +183,33 @@ export class ResponseInterceptor implements NestInterceptor {
         return queryString ? `${baseUrl}?${queryString}` : baseUrl
     }
 
-    private isApiResponse(value: unknown): value is ApiResponse {
-        return this.isRecord(value) && Object.hasOwn(value, 'data') && Object.hasOwn(value, 'meta')
+    private isApiResponse(value: unknown): value is ExistingApiResponse {
+        return (
+            this.isRecord(value) &&
+            Object.hasOwn(value, 'data') &&
+            (Object.hasOwn(value, 'meta') ||
+                (typeof value.status === 'string' && this.isFiniteNumber(value.status_code)))
+        )
+    }
+
+    private normalizeApiResponse(
+        value: ExistingApiResponse,
+        statusCode: number,
+        status: string,
+    ): ApiResponse<unknown, unknown> {
+        const { meta, ...response } = value
+
+        return {
+            ...response,
+            data: value.data ?? null,
+            status_code: statusCode,
+            status,
+            ...(meta !== null && meta !== undefined ? { meta } : {}),
+        }
+    }
+
+    private getResponseStatus(statusCode: number): MappedResponseStatus {
+        return RESPONSE_STATUS_BY_CODE[statusCode] ?? 'success'
     }
 
     private isPagePaginationInput(value: unknown): value is PagePaginationInput {

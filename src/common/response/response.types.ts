@@ -2,7 +2,9 @@ export type AdditionalMeta = Record<string, unknown>
 
 export interface ApiResponse<T = unknown, M = AdditionalMeta> {
     data: T | null
-    meta: M | null
+    status_code: number
+    status: string
+    meta?: M
 }
 
 export interface PagePaginationInput<T = unknown> extends AdditionalMeta {
