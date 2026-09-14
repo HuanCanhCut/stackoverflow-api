@@ -4,7 +4,7 @@ import { NestExpressApplication } from '@nestjs/platform-express'
 import { cert, initializeApp } from 'firebase-admin/app'
 import helmet from 'helmet'
 
-import { AppModule, ObserveInstrument } from './app.module.js'
+import { AppModule, ObserveInstrument } from '~/app.module.js'
 
 initializeApp({
     credential: cert({
