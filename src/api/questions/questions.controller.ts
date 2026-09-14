@@ -1,4 +1,16 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Req, UnauthorizedException } from '@nestjs/common'
+import {
+    Body,
+    Controller,
+    Delete,
+    Get,
+    HttpCode,
+    HttpStatus,
+    Param,
+    Patch,
+    Post,
+    Req,
+    UnauthorizedException,
+} from '@nestjs/common'
 
 import type { IRequest } from '../../type.js'
 import { CreateQuestionDto } from './dto/create-question.dto.js'
@@ -38,11 +50,18 @@ export class QuestionsController {
             throw new UnauthorizedException()
         }
 
-        return this.questionsService.update(+id, updateQuestionDto)
+        return this.questionsService.update({ id: Number(id), updateQuestionDto, currentUserId: decoded.sub })
     }
 
     @Delete(':id')
-    remove(@Param('id') id: string) {
-        return this.questionsService.remove(+id)
+    @HttpCode(HttpStatus.NO_CONTENT)
+    remove(@Param('id') id: string, @Req() req: IRequest) {
+        const decoded = req.decoded
+
+        if (!decoded) {
+            throw new UnauthorizedException({ message: 'Unauthorized' })
+        }
+
+        return this.questionsService.remove({ id: Number(id), currentUserId: decoded.sub })
     }
 }

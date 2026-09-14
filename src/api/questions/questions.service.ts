@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common'
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common'
 
 import { PrismaService } from '../../config/prisma/prisma.service.js'
 import { CreateQuestionDto } from './dto/create-question.dto.js'
@@ -83,7 +83,15 @@ export class QuestionsService {
         return `This action returns a #${id} question`
     }
 
-    async update(id: number, updateQuestionDto: UpdateQuestionDto) {
+    async update({
+        id,
+        updateQuestionDto,
+        currentUserId,
+    }: {
+        id: number
+        updateQuestionDto: UpdateQuestionDto
+        currentUserId: number
+    }) {
         return this.prisma.$transaction(async (tx) => {
             const question = await tx.question.findUnique({
                 where: {
@@ -93,6 +101,10 @@ export class QuestionsService {
 
             if (!question) {
                 throw new NotFoundException('Question not found')
+            }
+
+            if (question.author_id !== currentUserId) {
+                throw new BadRequestException('You are not the author of this question')
             }
 
             const tags = updateQuestionDto.tags ? await this.resolveTags(tx, updateQuestionDto.tags) : undefined
@@ -128,7 +140,23 @@ export class QuestionsService {
         })
     }
 
-    remove(id: number) {
-        return `This action removes a #${id} question`
+    async remove({ id, currentUserId }: { id: number; currentUserId: number }) {
+        const question = await this.prisma.question.findUnique({
+            where: {
+                id,
+            },
+        })
+
+        if (question?.author_id !== currentUserId) {
+            throw new ForbiddenException('You are not the author of this question')
+        }
+
+        await this.prisma.question.delete({
+            where: {
+                id,
+            },
+        })
+
+        return
     }
 }
