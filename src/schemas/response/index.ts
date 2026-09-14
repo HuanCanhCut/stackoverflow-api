@@ -18,7 +18,7 @@ type ResponsePagination<T extends Record<string, unknown> = Record<string, unkno
 
 export const responseData = <T, M>(data: T, meta?: M) => ({
     data: data ?? null,
-    meta: meta ?? null,
+    meta: meta,
 })
 
 interface Response {

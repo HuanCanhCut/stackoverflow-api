@@ -1,5 +1,6 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Req, UnauthorizedException } from '@nestjs/common'
 
+import { responseData } from '../../schemas/response/index.js'
 import type { IRequest } from '../../type.js'
 import { CreateQuestionDto } from './dto/create-question.dto.js'
 import { UpdateQuestionDto } from './dto/update-question.dto.js'
@@ -10,14 +11,16 @@ export class QuestionsController {
     constructor(private readonly questionsService: QuestionsService) {}
 
     @Post()
-    create(@Body() createQuestionDto: CreateQuestionDto, @Req() req: IRequest) {
+    async create(@Body() createQuestionDto: CreateQuestionDto, @Req() req: IRequest) {
         const decoded = req.decoded
 
         if (!decoded) {
             throw new UnauthorizedException()
         }
 
-        return this.questionsService.create(createQuestionDto, decoded.sub)
+        const createdQuestion = await this.questionsService.create(createQuestionDto, decoded.sub)
+
+        return responseData(createdQuestion)
     }
 
     @Get()
@@ -31,8 +34,16 @@ export class QuestionsController {
     }
 
     @Patch(':id')
-    update(@Param('id') id: string, @Body() updateQuestionDto: UpdateQuestionDto) {
-        return this.questionsService.update(+id, updateQuestionDto)
+    async update(@Param('id') id: string, @Body() updateQuestionDto: UpdateQuestionDto, @Req() req: IRequest) {
+        const decoded = req.decoded
+
+        if (!decoded) {
+            throw new UnauthorizedException()
+        }
+
+        const updatedQuestion = await this.questionsService.update(+id, updateQuestionDto)
+
+        return responseData(updatedQuestion)
     }
 
     @Delete(':id')
