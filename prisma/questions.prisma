@@ -6,9 +6,11 @@ model Question {
   author      User                 @relation("author", fields: [author_id], references: [id], onUpdate: Cascade, onDelete: Cascade)
   tags        QuestionTag[]
   attachments QuestionAttachment[]
+  post_score  PostScore?
   votes       Int                  @default(0)
   created_at  DateTime             @default(now())
   updated_at  DateTime             @updatedAt
 
+  @@index([created_at])
   @@map("questions")
 }

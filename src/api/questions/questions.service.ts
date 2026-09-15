@@ -3,6 +3,7 @@ import { BadRequestException, ForbiddenException, Injectable, NotFoundException 
 import { PrismaService } from '../../config/prisma/prisma.service.js'
 import { UploadsService } from '../uploads/uploads.service.js'
 import { CreateQuestionDto } from './dto/create-question.dto.js'
+import { GetQuestionsDto } from './dto/get-questions.dto.js'
 import { UpdateQuestionDto } from './dto/update-question.dto.js'
 
 import { S3Folder } from '~/types/s3.type.js'
@@ -58,8 +59,6 @@ export class QuestionsService {
             folder: S3Folder.QUESTIONS,
         })
 
-        console.log(objectKeys)
-
         return this.prisma.$transaction(async (tx) => {
             const tags = await this.resolveTags(tx, createQuestionDto.tags)
 
@@ -98,8 +97,41 @@ export class QuestionsService {
         })
     }
 
-    findAll() {
-        return `This action returns all questions`
+    async findAll({ page, per_page }: GetQuestionsDto) {
+        const [questions, total] = await this.prisma.$transaction([
+            this.prisma.question.findMany({
+                skip: (page - 1) * per_page,
+                take: per_page,
+                orderBy: [
+                    {
+                        post_score: {
+                            score: 'desc',
+                        },
+                    },
+                    { created_at: 'desc' },
+                    { id: 'desc' },
+                ],
+                include: {
+                    author: true,
+                    tags: {
+                        include: {
+                            tag: true,
+                        },
+                    },
+                    attachments: true,
+                    post_score: true,
+                },
+            }),
+            this.prisma.question.count(),
+        ])
+
+        return {
+            data: questions,
+            total,
+            count: questions.length,
+            current_page: page,
+            per_page,
+        }
     }
 
     findOne(id: number) {

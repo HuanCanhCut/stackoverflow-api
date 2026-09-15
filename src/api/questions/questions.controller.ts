@@ -8,14 +8,18 @@ import {
     Param,
     Patch,
     Post,
+    Query,
     Req,
     UnauthorizedException,
 } from '@nestjs/common'
 
 import type { IRequest } from '../../type.js'
 import { CreateQuestionDto } from './dto/create-question.dto.js'
+import { GetQuestionsDto } from './dto/get-questions.dto.js'
 import { UpdateQuestionDto } from './dto/update-question.dto.js'
 import { QuestionsService } from './questions.service.js'
+
+import { ResponsePagination } from '~/common/response/response.decorators.js'
 
 @Controller('questions')
 export class QuestionsController {
@@ -33,8 +37,9 @@ export class QuestionsController {
     }
 
     @Get()
-    findAll() {
-        return this.questionsService.findAll()
+    @ResponsePagination()
+    findAll(@Query() query: GetQuestionsDto) {
+        return this.questionsService.findAll(query)
     }
 
     @Get(':id')

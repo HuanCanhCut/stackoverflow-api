@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common'
 import { ConfigModule, ConfigService } from '@nestjs/config'
 import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core'
 import { createObserveModule } from '@nestjs/observe'
+import { ScheduleModule } from '@nestjs/schedule'
 
 import { AuthModule } from './api/auth/auth.module.js'
 import { QuestionsModule } from './api/questions/questions.module.js'
@@ -16,6 +17,7 @@ import { GlobalExceptionFilter } from './error/errorHanlder.js'
 import { JwtTokenModule } from './modules/jwt/jwt.module.js'
 import { MailModule } from './modules/mail/mail.module.js'
 import { NodemailerModule } from './modules/nodemailer/nodemailer.module.js'
+import { QuestionScoreModule } from './modules/question_score/question_score.module.js'
 import { RateLimitModule } from './modules/rate_limit/rate_limit.module.js'
 import { QueueModule } from './queue/queue.module.js'
 
@@ -26,6 +28,7 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule()
         ConfigModule.forRoot({
             isGlobal: true,
         }),
+        ScheduleModule.forRoot(),
 
         ObserveModule.forRootAsync({
             inject: [ConfigService],
@@ -48,6 +51,7 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule()
         RateLimitModule,
         JwtTokenModule,
         MailModule,
+        QuestionScoreModule,
         QuestionsModule,
         UploadsModule,
     ],

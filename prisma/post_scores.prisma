@@ -1,0 +1,12 @@
+model PostScore {
+  question_id   Int      @id
+  score         Float    @default(0)
+  calculated_at DateTime @default(now())
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  question Question @relation(fields: [question_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([score])
+  @@map("post_scores")
+}
