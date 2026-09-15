@@ -19,10 +19,20 @@ export const createBasePrisma = () => {
         acquireTimeout: 10_000,
     })
 
-    return new PrismaClient({ adapter })
+    return new PrismaClient({
+        adapter,
+        omit: {
+            user: {
+                password: true,
+                email: true,
+                sign_in_provider: true,
+                provider_uid: true,
+            },
+        },
+    })
 }
 
-export const extendPrismaClient = (basePrisma: PrismaClient) => {
+export const extendPrismaClient = (basePrisma: ReturnType<typeof createBasePrisma>) => {
     return basePrisma.$extends({
         result: {
             user: {
@@ -37,40 +47,6 @@ export const extendPrismaClient = (basePrisma: PrismaClient) => {
                 },
             },
         },
-
-        query: {
-            user: {
-                async $allOperations({ operation, args, query }) {
-                    const operationsWithOmit = [
-                        'findUnique',
-                        'findUniqueOrThrow',
-                        'findFirst',
-                        'findFirstOrThrow',
-                        'findMany',
-                        'create',
-                        'update',
-                        'upsert',
-                        'delete',
-                    ]
-
-                    if (operationsWithOmit.includes(operation)) {
-                        const anyArgs = (args ?? {}) as Record<string, any>
-
-                        if (!anyArgs.select) {
-                            anyArgs.omit = {
-                                password: true,
-                                email: true,
-                                sign_in_provider: true,
-                                provider_uid: true,
-                                ...anyArgs.omit,
-                            }
-                        }
-                    }
-
-                    return query(args)
-                },
-            },
-        },
     })
 }
 
@@ -78,7 +54,7 @@ export type ExtendedPrismaClient = ReturnType<typeof extendPrismaClient>
 
 @Injectable()
 export class PrismaService implements OnModuleInit, OnModuleDestroy {
-    private readonly basePrisma: PrismaClient
+    private readonly basePrisma: ReturnType<typeof createBasePrisma>
     private readonly extendedClient: ExtendedPrismaClient
 
     constructor() {
