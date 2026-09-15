@@ -1,18 +1,18 @@
-import { Injectable, NestMiddleware, UnauthorizedException } from '@nestjs/common'
-import type { NextFunction, Response } from 'express'
+import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common'
 import { Redis } from 'ioredis'
 
 import type { IRequest } from '../../type.js'
 import decodedToken from '../../utils/jwt.util.js'
 
 @Injectable()
-export class AuthMiddleware implements NestMiddleware {
+export class AuthGuard implements CanActivate {
     constructor(private readonly redis: Redis) {}
 
-    async use(req: IRequest, _res: Response, next: NextFunction) {
-        const accessToken = req.headers.authorization?.split(' ')[1]
+    async canActivate(context: ExecutionContext): Promise<boolean> {
+        const req = context.switchToHttp().getRequest<IRequest>()
+        const [scheme, accessToken] = req.headers.authorization?.split(' ') ?? []
 
-        if (!accessToken) {
+        if (scheme !== 'Bearer' || !accessToken) {
             throw new UnauthorizedException({
                 message: 'Không tìm thấy access token',
                 code: 'ACCESS_TOKEN_REQUIRED',
@@ -39,6 +39,6 @@ export class AuthMiddleware implements NestMiddleware {
 
         req.decoded = payload
 
-        next()
+        return true
     }
 }

@@ -11,9 +11,10 @@ import {
     Post,
     Query,
     Req,
-    UnauthorizedException,
+    UseGuards,
 } from '@nestjs/common'
 
+import { AuthGuard } from '../../common/guards/auth.guard.js'
 import type { IRequest } from '../../type.js'
 import { CreateQuestionDto } from './dto/create-question.dto.js'
 import { GetQuestionsDto } from './dto/get-questions.dto.js'
@@ -27,14 +28,9 @@ export class QuestionsController {
     constructor(private readonly questionsService: QuestionsService) {}
 
     @Post()
+    @UseGuards(AuthGuard)
     async create(@Body() createQuestionDto: CreateQuestionDto, @Req() req: IRequest) {
-        const decoded = req.decoded
-
-        if (!decoded) {
-            throw new UnauthorizedException()
-        }
-
-        return this.questionsService.create(createQuestionDto, decoded.sub)
+        return this.questionsService.create(createQuestionDto, req.decoded.sub)
     }
 
     @Get()
@@ -49,25 +45,15 @@ export class QuestionsController {
     }
 
     @Patch(':id')
+    @UseGuards(AuthGuard)
     async update(@Param('id') id: string, @Body() updateQuestionDto: UpdateQuestionDto, @Req() req: IRequest) {
-        const decoded = req.decoded
-
-        if (!decoded) {
-            throw new UnauthorizedException()
-        }
-
-        return this.questionsService.update({ id: Number(id), updateQuestionDto, currentUserId: decoded.sub })
+        return this.questionsService.update({ id: Number(id), updateQuestionDto, currentUserId: req.decoded.sub })
     }
 
     @Delete(':id')
     @HttpCode(HttpStatus.NO_CONTENT)
+    @UseGuards(AuthGuard)
     remove(@Param('id') id: string, @Req() req: IRequest) {
-        const decoded = req.decoded
-
-        if (!decoded) {
-            throw new UnauthorizedException({ message: 'Unauthorized' })
-        }
-
-        return this.questionsService.remove({ id: Number(id), currentUserId: decoded.sub })
+        return this.questionsService.remove({ id: Number(id), currentUserId: req.decoded.sub })
     }
 }

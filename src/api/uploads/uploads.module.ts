@@ -1,16 +1,11 @@
-import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common'
+import { Module } from '@nestjs/common'
 
+import { AuthGuard } from '../../common/guards/auth.guard.js'
 import { UploadsController } from './uploads.controller.js'
 import { UploadsService } from './uploads.service.js'
 
-import { AuthMiddleware } from '~/middleware/auth/auth.middleware.js'
-
 @Module({
     controllers: [UploadsController],
-    providers: [UploadsService],
+    providers: [UploadsService, AuthGuard],
 })
-export class UploadsModule implements NestModule {
-    configure(consumer: MiddlewareConsumer) {
-        consumer.apply(AuthMiddleware).forRoutes(UploadsController)
-    }
-}
+export class UploadsModule {}

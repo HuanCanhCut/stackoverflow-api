@@ -1,6 +1,7 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Post, Req } from '@nestjs/common'
+import { Body, Controller, Get, HttpCode, HttpStatus, Post, Req, UseGuards } from '@nestjs/common'
 import { seconds, Throttle } from '@nestjs/throttler'
 
+import { AuthGuard } from '../../common/guards/auth.guard.js'
 import type { IRequest } from '../../type.js'
 import { AuthService } from './auth.service.js'
 import { ResetPasswordDTO, SendForgotPasswordCodeDTO } from './dto/forgot_password.dto.js'
@@ -68,6 +69,7 @@ export class AuthController {
     }
 
     @Get('me')
+    @UseGuards(AuthGuard)
     async getCurrentUser(@Req() req: IRequest) {
         const user = await this.authService.getCurrentUser(req.decoded.sub)
 

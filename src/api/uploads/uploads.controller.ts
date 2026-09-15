@@ -1,5 +1,6 @@
-import { Body, Controller, HttpCode, HttpStatus, Post, Req, UnauthorizedException } from '@nestjs/common'
+import { Body, Controller, HttpCode, HttpStatus, Post, Req, UseGuards } from '@nestjs/common'
 
+import { AuthGuard } from '../../common/guards/auth.guard.js'
 import { GetS3PresignedUrlDto } from './dto/get-presigned-url.dto.js'
 import { UploadsService } from './uploads.service.js'
 
@@ -11,18 +12,13 @@ export class UploadsController {
 
     @Post('presigned-url')
     @HttpCode(HttpStatus.OK)
+    @UseGuards(AuthGuard)
     async getUploadPresignedUrl(@Body() body: GetS3PresignedUrlDto, @Req() req: IRequest) {
         const { files } = body
 
-        const decoded = req.decoded
-
-        if (!decoded) {
-            throw new UnauthorizedException({ message: 'Unauthorized' })
-        }
-
         const presignedUrls = await this.uploadsService.getUploadPresignedUrl({
             files,
-            currentUserId: decoded.sub,
+            currentUserId: req.decoded.sub,
         })
 
         return presignedUrls

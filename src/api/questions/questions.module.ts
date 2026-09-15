@@ -1,28 +1,12 @@
-import { MiddlewareConsumer, Module, NestModule, RequestMethod } from '@nestjs/common'
+import { Module } from '@nestjs/common'
 
-import { AuthMiddleware } from '../../middleware/auth/auth.middleware.js'
+import { AuthGuard } from '../../common/guards/auth.guard.js'
 import { UploadsService } from '../uploads/uploads.service.js'
 import { QuestionsController } from './questions.controller.js'
 import { QuestionsService } from './questions.service.js'
 
 @Module({
     controllers: [QuestionsController],
-    providers: [QuestionsService, UploadsService],
+    providers: [QuestionsService, UploadsService, AuthGuard],
 })
-export class QuestionsModule implements NestModule {
-    configure(consumer: MiddlewareConsumer) {
-        consumer
-            .apply(AuthMiddleware)
-            .exclude(
-                {
-                    path: 'questions',
-                    method: RequestMethod.GET,
-                },
-                {
-                    path: 'questions/:id',
-                    method: RequestMethod.GET,
-                },
-            )
-            .forRoutes(QuestionsController)
-    }
-}
+export class QuestionsModule {}
