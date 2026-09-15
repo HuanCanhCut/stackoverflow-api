@@ -6,6 +6,7 @@ import {
     HttpCode,
     HttpStatus,
     Param,
+    ParseIntPipe,
     Patch,
     Post,
     Query,
@@ -43,8 +44,8 @@ export class QuestionsController {
     }
 
     @Get(':id')
-    findOne(@Param('id') id: string) {
-        return this.questionsService.findOne(+id)
+    findOne(@Param('id', ParseIntPipe) id: number) {
+        return this.questionsService.findOne(id)
     }
 
     @Patch(':id')

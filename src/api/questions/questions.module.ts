@@ -13,10 +13,16 @@ export class QuestionsModule implements NestModule {
     configure(consumer: MiddlewareConsumer) {
         consumer
             .apply(AuthMiddleware)
-            .exclude({
-                path: 'questions',
-                method: RequestMethod.GET,
-            })
+            .exclude(
+                {
+                    path: 'questions',
+                    method: RequestMethod.GET,
+                },
+                {
+                    path: 'questions/:id',
+                    method: RequestMethod.GET,
+                },
+            )
             .forRoutes(QuestionsController)
     }
 }

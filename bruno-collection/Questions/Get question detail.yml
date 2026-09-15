@@ -1,0 +1,16 @@
+info:
+  name: Get question detail
+  type: http
+  seq: 5
+
+http:
+  method: GET
+  url: "{{API_ENDPOINT}}/questions/6"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false
