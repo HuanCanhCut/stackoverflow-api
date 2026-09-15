@@ -17,12 +17,15 @@ http:
         "body": "Tôi đang tìm hiểu NestJS và muốn kết nối với cơ sở dữ liệu PostgreSQL thông qua Prisma ORM.",
         "tags": [
           {
+            "id": 1,
             "name": "nestjs"
           },
           {
+            "id": 2,
             "name": "prisma"
           }
-        ]
+        ],
+        "upload_ids": ["e53fca95-57ea-45dc-bbb3-1b7d6ea30070"]
       }
   auth: inherit
 

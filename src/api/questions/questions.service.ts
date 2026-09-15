@@ -1,14 +1,20 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common'
 
 import { PrismaService } from '../../config/prisma/prisma.service.js'
+import { UploadsService } from '../uploads/uploads.service.js'
 import { CreateQuestionDto } from './dto/create-question.dto.js'
 import { UpdateQuestionDto } from './dto/update-question.dto.js'
+
+import { S3Folder } from '~/types/s3.type.js'
 
 type TransactionClient = Parameters<Parameters<PrismaService['$transaction']>[0]>[0]
 
 @Injectable()
 export class QuestionsService {
-    constructor(private readonly prisma: PrismaService) {}
+    constructor(
+        private readonly prisma: PrismaService,
+        private readonly uploadService: UploadsService,
+    ) {}
 
     private async resolveTags(tx: TransactionClient, inputTags: CreateQuestionDto['tags']) {
         const tagIds = inputTags.filter((tag) => tag.id !== null).map((tag) => tag.id!)
@@ -46,6 +52,14 @@ export class QuestionsService {
     }
 
     async create(createQuestionDto: CreateQuestionDto, authorId: number) {
+        const objectKeys = await this.uploadService.verifyUploadIds({
+            uploadIds: createQuestionDto.upload_ids,
+            currentUserId: authorId,
+            folder: S3Folder.QUESTIONS,
+        })
+
+        console.log(objectKeys)
+
         return this.prisma.$transaction(async (tx) => {
             const tags = await this.resolveTags(tx, createQuestionDto.tags)
 
@@ -63,6 +77,14 @@ export class QuestionsService {
                             skipDuplicates: true,
                         },
                     },
+                    attachments: {
+                        createMany: {
+                            data: objectKeys.map((key) => ({
+                                object_key: key,
+                            })),
+                            skipDuplicates: true,
+                        },
+                    },
                 },
                 include: {
                     tags: {
@@ -70,6 +92,7 @@ export class QuestionsService {
                             tag: true,
                         },
                     },
+                    attachments: true,
                 },
             })
         })

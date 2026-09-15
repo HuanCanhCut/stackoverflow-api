@@ -1,0 +1,12 @@
+model QuestionAttachment {
+  id          Int      @id @default(autoincrement())
+  question_id Int
+  object_key  String   @db.VarChar(255)
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  question Question @relation(fields: [question_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([question_id])
+  @@map("question_attachments")
+}

@@ -6,6 +6,7 @@ import {
     IsInt,
     IsNotEmpty,
     IsString,
+    IsUUID,
     MaxLength,
     ValidateIf,
     ValidateNested,
@@ -38,4 +39,9 @@ export class CreateQuestionDto {
     @ValidateNested({ each: true })
     @Type(() => TagDto)
     tags: TagDto[]
+
+    @IsArray({ message: 'Danh sách upload_ids phải là mảng' })
+    @ArrayMaxSize(10, { message: 'Câu hỏi chỉ được gắn tối đa 10 ảnh' })
+    @IsUUID('4', { each: true, message: 'Upload_ids phải là chuỗi' })
+    upload_ids: string[]
 }
