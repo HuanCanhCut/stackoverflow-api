@@ -17,6 +17,7 @@ import {
 import { AuthGuard } from '../../common/guards/auth.guard.js'
 import type { IRequest } from '../../type.js'
 import { CreateQuestionDto } from './dto/create-question.dto.js'
+import { GetQuestionRepliesDto } from './dto/get-question-replies.dto.js'
 import { GetQuestionsDto } from './dto/get-questions.dto.js'
 import { UpdateQuestionDto } from './dto/update-question.dto.js'
 import { QuestionsService } from './questions.service.js'
@@ -37,6 +38,12 @@ export class QuestionsController {
     @ResponsePagination()
     findAll(@Query() query: GetQuestionsDto) {
         return this.questionsService.findAll(query)
+    }
+
+    @Get(':id/replies')
+    @ResponsePagination()
+    findReplies(@Param('id', ParseIntPipe) id: number, @Query() query: GetQuestionRepliesDto) {
+        return this.questionsService.findReplies(id, query)
     }
 
     @Get(':id')

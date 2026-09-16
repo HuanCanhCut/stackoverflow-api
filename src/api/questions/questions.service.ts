@@ -3,6 +3,7 @@ import { BadRequestException, ForbiddenException, Injectable, NotFoundException 
 import { PrismaService } from '../../config/prisma/prisma.service.js'
 import { UploadsService } from '../uploads/uploads.service.js'
 import { CreateQuestionDto } from './dto/create-question.dto.js'
+import { GetQuestionRepliesDto, QuestionRepliesOrderBy } from './dto/get-question-replies.dto.js'
 import { GetQuestionsDto } from './dto/get-questions.dto.js'
 import { UpdateQuestionDto } from './dto/update-question.dto.js'
 
@@ -198,6 +199,65 @@ export class QuestionsService {
         return {
             ...questionData,
             reply_count: _count.replies,
+        }
+    }
+
+    async findReplies(parentId: number, { order_by, page, per_page }: GetQuestionRepliesDto) {
+        const parent = await this.prisma.question.findUnique({
+            where: {
+                id: parentId,
+            },
+            select: {
+                id: true,
+            },
+        })
+
+        if (!parent) {
+            throw new NotFoundException('Question not found')
+        }
+
+        const [replies, total] = await this.prisma.$transaction([
+            this.prisma.question.findMany({
+                where: {
+                    parent_id: parentId,
+                },
+                skip: (page - 1) * per_page,
+                take: per_page,
+                orderBy:
+                    order_by === QuestionRepliesOrderBy.Vote
+                        ? [{ vote_count: 'desc' }, { created_at: 'desc' }, { id: 'desc' }]
+                        : [{ created_at: 'desc' }, { id: 'desc' }],
+                include: {
+                    author: {
+                        omit: {
+                            password: false,
+                            email: false,
+                            sign_in_provider: false,
+                            provider_uid: false,
+                        },
+                    },
+                    tags: {
+                        include: {
+                            tag: true,
+                        },
+                    },
+                    attachments: true,
+                    post_score: true,
+                },
+            }),
+            this.prisma.question.count({
+                where: {
+                    parent_id: parentId,
+                },
+            }),
+        ])
+
+        return {
+            data: replies,
+            total,
+            count: replies.length,
+            current_page: page,
+            per_page,
         }
     }
 
