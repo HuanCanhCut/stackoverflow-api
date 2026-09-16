@@ -1,0 +1,19 @@
+info:
+  name: "[Auth] Downvote question"
+  type: http
+  seq: 5
+
+http:
+  method: PATCH
+  url: "{{API_ENDPOINT}}/questions/1/downvote"
+  headers:
+    - name: Authorization
+      value: Bearer {{ACCESS_TOKEN}}
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

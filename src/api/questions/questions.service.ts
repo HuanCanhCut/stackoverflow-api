@@ -158,6 +158,38 @@ export class QuestionsService {
         return question
     }
 
+    async upvote(id: number) {
+        return this.updateVotes(id, 'increment')
+    }
+
+    async downvote(id: number) {
+        return this.updateVotes(id, 'decrement')
+    }
+
+    private async updateVotes(id: number, operation: 'increment' | 'decrement') {
+        const question = await this.prisma.question.findUnique({
+            where: {
+                id,
+            },
+            select: {
+                id: true,
+            },
+        })
+
+        if (!question) {
+            throw new NotFoundException('Question not found')
+        }
+
+        return this.prisma.question.update({
+            where: {
+                id,
+            },
+            data: {
+                votes: operation === 'increment' ? { increment: 1 } : { decrement: 1 },
+            },
+        })
+    }
+
     async update({
         id,
         updateQuestionDto,

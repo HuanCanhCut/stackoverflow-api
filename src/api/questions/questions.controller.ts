@@ -44,6 +44,18 @@ export class QuestionsController {
         return this.questionsService.findOne(id)
     }
 
+    @Patch(':id/upvote')
+    @UseGuards(AuthGuard)
+    upvote(@Param('id', ParseIntPipe) id: number) {
+        return this.questionsService.upvote(id)
+    }
+
+    @Patch(':id/downvote')
+    @UseGuards(AuthGuard)
+    downvote(@Param('id', ParseIntPipe) id: number) {
+        return this.questionsService.downvote(id)
+    }
+
     @Patch(':id')
     @UseGuards(AuthGuard)
     async update(@Param('id') id: string, @Body() updateQuestionDto: UpdateQuestionDto, @Req() req: IRequest) {

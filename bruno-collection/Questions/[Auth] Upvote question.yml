@@ -1,0 +1,19 @@
+info:
+  name: "[Auth] Upvote question"
+  type: http
+  seq: 4
+
+http:
+  method: PATCH
+  url: "{{API_ENDPOINT}}/questions/1/upvote"
+  headers:
+    - name: Authorization
+      value: Bearer {{ACCESS_TOKEN}}
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false
