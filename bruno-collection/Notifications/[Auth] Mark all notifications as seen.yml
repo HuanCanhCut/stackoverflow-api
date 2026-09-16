@@ -1,0 +1,19 @@
+info:
+  name: "[Auth] Mark all notifications as seen"
+  type: http
+  seq: 3
+
+http:
+  method: PATCH
+  url: "{{API_ENDPOINT}}/notifications/seen"
+  headers:
+    - name: Authorization
+      value: Bearer {{ACCESS_TOKEN}}
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

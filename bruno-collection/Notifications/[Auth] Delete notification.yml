@@ -1,0 +1,19 @@
+info:
+  name: "[Auth] Delete notification"
+  type: http
+  seq: 5
+
+http:
+  method: DELETE
+  url: "{{API_ENDPOINT}}/notifications/019941ca-e000-7000-8000-000000000001"
+  headers:
+    - name: Authorization
+      value: Bearer {{ACCESS_TOKEN}}
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

@@ -10,28 +10,30 @@ enum EnumSignInProvider {
 }
 
 model User {
-  id               Int                @id @default(autoincrement())
-  email            String?            @unique
-  password         String?
-  first_name       String?
-  last_name        String?
-  nickname         String             @unique @db.VarChar(100)
-  avatar_path      String?
-  bio              String?            @db.VarChar(500)
-  role             EnumUserRole       @default(user)
-  is_active        Boolean            @default(true)
-  is_blocked       Boolean            @default(false)
-  blocked_at       DateTime?
-  blocked_reason   String?            @db.Text
-  sign_in_provider EnumSignInProvider @default(email)
-  provider_uid     String?            @unique @db.VarChar(255)
-  blocked_by       Int?
-  blocked_by_user  User?              @relation("UserBlockedBy", fields: [blocked_by], references: [id], onDelete: SetNull, onUpdate: Cascade)
-  blocked_users    User[]             @relation("UserBlockedBy")
-  questions        Question[]         @relation("author")
-  refresh_tokens   RefreshToken[]
-  created_at       DateTime           @default(now())
-  updated_at       DateTime           @updatedAt
+  id                      Int                     @id @default(autoincrement())
+  email                   String?                 @unique
+  password                String?
+  first_name              String?
+  last_name               String?
+  nickname                String                  @unique @db.VarChar(100)
+  avatar_path             String?
+  bio                     String?                 @db.VarChar(500)
+  role                    EnumUserRole            @default(user)
+  is_active               Boolean                 @default(true)
+  is_blocked              Boolean                 @default(false)
+  blocked_at              DateTime?
+  blocked_reason          String?                 @db.Text
+  sign_in_provider        EnumSignInProvider      @default(email)
+  provider_uid            String?                 @unique @db.VarChar(255)
+  blocked_by              Int?
+  blocked_by_user         User?                   @relation("UserBlockedBy", fields: [blocked_by], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  blocked_users           User[]                  @relation("UserBlockedBy")
+  questions               Question[]              @relation("author")
+  notifications           Notification[]          @relation("NotificationActor")
+  notification_recipients NotificationRecipient[] @relation("NotificationRecipientUser")
+  refresh_tokens          RefreshToken[]
+  created_at              DateTime                @default(now())
+  updated_at              DateTime                @updatedAt
 
   @@map("users")
 }

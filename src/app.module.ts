@@ -5,6 +5,7 @@ import { createObserveModule } from '@nestjs/observe'
 import { ScheduleModule } from '@nestjs/schedule'
 
 import { AuthModule } from './api/auth/auth.module.js'
+import { NotificationsModule } from './api/notifications/notifications.module.js'
 import { QuestionsModule } from './api/questions/questions.module.js'
 import { UploadsModule } from './api/uploads/uploads.module.js'
 import { AppController } from './app.controller.js'
@@ -54,6 +55,7 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule()
         QuestionScoreModule,
         QuestionsModule,
         UploadsModule,
+        NotificationsModule,
     ],
 
     controllers: [AppController],

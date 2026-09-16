@@ -1,0 +1,32 @@
+model Notification {
+  id         String                  @id @default(uuid(7)) @db.Char(36)
+  content    String                  @db.VarChar(255)
+  metadata   Json?
+  actor_id   Int
+  actor      User                    @relation("NotificationActor", fields: [actor_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  recipients NotificationRecipient[]
+  created_at DateTime                @default(now())
+  updated_at DateTime                @updatedAt
+
+  @@index([actor_id])
+  @@map("notifications")
+}
+
+model NotificationRecipient {
+  id              String       @id @default(uuid(7)) @db.Char(36)
+  notification_id String       @db.Char(36)
+  recipient_id    Int
+  is_read         Boolean      @default(false)
+  is_seen         Boolean      @default(false)
+  seen_at         DateTime?
+  read_at         DateTime?
+  created_at      DateTime     @default(now())
+  updated_at      DateTime     @updatedAt
+  notification    Notification @relation(fields: [notification_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  recipient       User         @relation("NotificationRecipientUser", fields: [recipient_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@unique([notification_id, recipient_id])
+  @@index([recipient_id, is_read])
+  @@index([recipient_id, is_seen])
+  @@map("notification_recipients")
+}
