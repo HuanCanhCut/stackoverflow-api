@@ -60,6 +60,21 @@ export class QuestionsService {
         })
 
         return this.prisma.$transaction(async (tx) => {
+            if (createQuestionDto.parent_id != null) {
+                const parent = await tx.question.findUnique({
+                    where: {
+                        id: createQuestionDto.parent_id,
+                    },
+                    select: {
+                        id: true,
+                    },
+                })
+
+                if (!parent) {
+                    throw new NotFoundException('Parent question not found')
+                }
+            }
+
             const tags = await this.resolveTags(tx, createQuestionDto.tags)
 
             return tx.question.create({
@@ -67,6 +82,7 @@ export class QuestionsService {
                     title: createQuestionDto.title,
                     body: createQuestionDto.body,
                     author_id: authorId,
+                    parent_id: createQuestionDto.parent_id,
 
                     tags: {
                         createMany: {
@@ -100,6 +116,9 @@ export class QuestionsService {
     async findAll({ page, per_page }: GetQuestionsDto) {
         const [questions, total] = await this.prisma.$transaction([
             this.prisma.question.findMany({
+                where: {
+                    parent_id: null,
+                },
                 skip: (page - 1) * per_page,
                 take: per_page,
                 orderBy: [
@@ -120,15 +139,29 @@ export class QuestionsService {
                     },
                     attachments: true,
                     post_score: true,
+                    _count: {
+                        select: {
+                            replies: true,
+                        },
+                    },
                 },
             }),
-            this.prisma.question.count(),
+            this.prisma.question.count({
+                where: {
+                    parent_id: null,
+                },
+            }),
         ])
 
+        const questionsWithReplyCount = questions.map(({ _count, ...question }) => ({
+            ...question,
+            reply_count: _count.replies,
+        }))
+
         return {
-            data: questions,
+            data: questionsWithReplyCount,
             total,
-            count: questions.length,
+            count: questionsWithReplyCount.length,
             current_page: page,
             per_page,
         }
@@ -148,6 +181,11 @@ export class QuestionsService {
                 },
                 attachments: true,
                 post_score: true,
+                _count: {
+                    select: {
+                        replies: true,
+                    },
+                },
             },
         })
 
@@ -155,7 +193,12 @@ export class QuestionsService {
             throw new NotFoundException('Question not found')
         }
 
-        return question
+        const { _count, ...questionData } = question
+
+        return {
+            ...questionData,
+            reply_count: _count.replies,
+        }
     }
 
     async upvote(id: number) {
@@ -185,7 +228,7 @@ export class QuestionsService {
                 id,
             },
             data: {
-                votes: operation === 'increment' ? { increment: 1 } : { decrement: 1 },
+                vote_count: operation === 'increment' ? { increment: 1 } : { decrement: 1 },
             },
         })
     }

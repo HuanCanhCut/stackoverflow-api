@@ -13,6 +13,7 @@ http:
     type: json
     data: |-
       {
+        "parent_id": null,
         "title": "Làm thế nào để cấu hình NestJS với Prisma?",
         "body": "Tôi đang tìm hiểu NestJS và muốn kết nối với cơ sở dữ liệu PostgreSQL thông qua Prisma ORM.",
         "tags": [

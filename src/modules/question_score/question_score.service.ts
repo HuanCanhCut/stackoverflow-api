@@ -11,16 +11,16 @@ const GRAVITY = 1.5
 const AGE_OFFSET_HOURS = 2
 
 export const calculateQuestionScore = ({
-    votes,
+    voteCount,
     createdAt,
     calculatedAt,
 }: {
-    votes: number
+    voteCount: number
     createdAt: Date
     calculatedAt: Date
 }) => {
     const ageHours = Math.max(0, (calculatedAt.getTime() - createdAt.getTime()) / HOUR_IN_MS)
-    const voteWeight = Math.max(0, votes) + 1
+    const voteWeight = Math.max(0, voteCount) + 1
 
     return voteWeight / Math.pow(ageHours + AGE_OFFSET_HOURS, GRAVITY)
 }
@@ -46,7 +46,7 @@ export class QuestionScoreService {
             },
             select: {
                 id: true,
-                votes: true,
+                vote_count: true,
                 created_at: true,
             },
         })
@@ -55,7 +55,7 @@ export class QuestionScoreService {
             await Promise.all(
                 questionBatch.map((question) => {
                     const score = calculateQuestionScore({
-                        votes: question.votes,
+                        voteCount: question.vote_count,
                         createdAt: question.created_at,
                         calculatedAt,
                     })

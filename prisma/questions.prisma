@@ -3,14 +3,18 @@ model Question {
   title       String               @db.VarChar(255)
   body        String               @db.Text
   author_id   Int
+  parent_id   Int?
   author      User                 @relation("author", fields: [author_id], references: [id], onUpdate: Cascade, onDelete: Cascade)
+  parent      Question?            @relation("QuestionReplies", fields: [parent_id], references: [id], onUpdate: Cascade, onDelete: Cascade)
+  replies     Question[]           @relation("QuestionReplies")
   tags        QuestionTag[]
   attachments QuestionAttachment[]
   post_score  PostScore?
-  votes       Int                  @default(0)
+  vote_count  Int                  @default(0)
   created_at  DateTime             @default(now())
   updated_at  DateTime             @updatedAt
 
+  @@index([parent_id])
   @@index([created_at])
   @@map("questions")
 }

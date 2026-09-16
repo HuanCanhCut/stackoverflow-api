@@ -5,9 +5,11 @@ import {
     IsArray,
     IsInt,
     IsNotEmpty,
+    IsOptional,
     IsString,
     IsUUID,
     MaxLength,
+    Min,
     ValidateIf,
     ValidateNested,
 } from 'class-validator'
@@ -24,6 +26,11 @@ export class TagDto {
 }
 
 export class CreateQuestionDto {
+    @IsOptional()
+    @IsInt({ message: 'Parent_id phải là số nguyên' })
+    @Min(1, { message: 'Parent_id phải lớn hơn 0' })
+    parent_id?: number | null
+
     @IsString({ message: 'Tiêu đề phải là chuỗi' })
     @IsNotEmpty({ message: 'Tiêu đề không được để trống' })
     @MaxLength(255, { message: 'Tiêu đề không được vượt quá 255 ký tự' })
