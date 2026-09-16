@@ -16,6 +16,7 @@ import type { StringValue } from 'ms'
 import { PrismaService } from '../../config/prisma/prisma.service.js'
 import { MailProducer } from '../../modules/mail/mail.producer.js'
 import { JwtPayload } from '../../type.js'
+import type { UpdateCurrentUserDto } from './dto/update-current-user.dto.js'
 
 @Injectable()
 export class AuthService {
@@ -229,17 +230,91 @@ export class AuthService {
     }
 
     async getCurrentUser(currentUserId: number) {
-        const user = await this.prisma.user.findUnique({
-            where: {
-                id: currentUserId,
-            },
-        })
+        const [user, questionCount, voteAggregation, answeredQuestions] = await this.prisma.$transaction([
+            this.prisma.user.findUnique({
+                where: {
+                    id: currentUserId,
+                },
+                omit: {
+                    email: false,
+                },
+            }),
+            this.prisma.question.count({
+                where: {
+                    author_id: currentUserId,
+                    parent_id: null,
+                },
+            }),
+            this.prisma.question.aggregate({
+                where: {
+                    author_id: currentUserId,
+                },
+                _sum: {
+                    vote_count: true,
+                },
+            }),
+            this.prisma.question.groupBy({
+                by: ['parent_id'],
+                where: {
+                    author_id: currentUserId,
+                    parent_id: {
+                        not: null,
+                    },
+                },
+            }),
+        ])
 
         if (!user) {
             throw new UnauthorizedException('Tài khoản không tồn tại')
         }
 
-        return user
+        return {
+            ...user,
+            question_count: questionCount,
+            vote_count: voteAggregation._sum.vote_count ?? 0,
+            answered_question_count: answeredQuestions.length,
+        }
+    }
+
+    async updateCurrentUser(currentUserId: number, body: UpdateCurrentUserDto) {
+        const currentUser = await this.prisma.user.findUnique({
+            where: {
+                id: currentUserId,
+            },
+            select: {
+                id: true,
+                nickname: true,
+            },
+        })
+
+        if (!currentUser) {
+            throw new UnauthorizedException('Tài khoản không tồn tại')
+        }
+
+        if (body.nickname !== undefined && body.nickname !== currentUser.nickname) {
+            const nicknameOwner = await this.prisma.user.findUnique({
+                where: {
+                    nickname: body.nickname,
+                },
+                select: {
+                    id: true,
+                },
+            })
+
+            if (nicknameOwner) {
+                throw new ConflictException('Nickname đã được sử dụng')
+            }
+        }
+
+        return this.prisma.user.update({
+            where: {
+                id: currentUserId,
+            },
+            data: body,
+            omit: {
+                email: false,
+            },
+        })
     }
 
     async loginWithToken(token: string) {

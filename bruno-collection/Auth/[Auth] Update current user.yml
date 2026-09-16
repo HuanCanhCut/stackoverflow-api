@@ -1,0 +1,29 @@
+info:
+  name: "[Auth] Update current user"
+  type: http
+  seq: 8
+
+http:
+  method: PATCH
+  url: "{{API_ENDPOINT}}/auth/me"
+  headers:
+    - name: Authorization
+      value: Bearer {{ACCESS_TOKEN}}
+  body:
+    type: json
+    data: |-
+      {
+        "first_name": "Nguyễn Văn",
+        "last_name": "A",
+        "nickname": "nguyenvana",
+        "avatar_path": null,
+        "bio": "NestJS developer"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Post, Req, UseGuards } from '@nestjs/common'
+import { Body, Controller, Get, HttpCode, HttpStatus, Patch, Post, Req, UseGuards } from '@nestjs/common'
 import { seconds, Throttle } from '@nestjs/throttler'
 
 import { AuthGuard } from '../../common/guards/auth.guard.js'
@@ -10,6 +10,7 @@ import { loginWithTokenDTO } from './dto/login_with_token.dto.js'
 import { LogoutDTO } from './dto/logout.dto.js'
 import { RefreshTokenDTO } from './dto/refresh_token.dto.js'
 import { RegisterDTO } from './dto/register.dto.js'
+import { UpdateCurrentUserDto } from './dto/update-current-user.dto.js'
 
 @Controller('auth')
 export class AuthController {
@@ -74,6 +75,12 @@ export class AuthController {
         const user = await this.authService.getCurrentUser(req.decoded.sub)
 
         return user
+    }
+
+    @Patch('me')
+    @UseGuards(AuthGuard)
+    updateCurrentUser(@Body() body: UpdateCurrentUserDto, @Req() req: IRequest) {
+        return this.authService.updateCurrentUser(req.decoded.sub, body)
     }
 
     @Post('login-with-token')
