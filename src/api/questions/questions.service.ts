@@ -5,6 +5,7 @@ import { UploadsService } from '../uploads/uploads.service.js'
 import { CreateQuestionDto } from './dto/create-question.dto.js'
 import { GetQuestionRepliesDto, QuestionRepliesOrderBy } from './dto/get-question-replies.dto.js'
 import { GetQuestionsDto } from './dto/get-questions.dto.js'
+import { GetSavedQuestionsDto } from './dto/get-saved-questions.dto.js'
 import { UpdateQuestionDto } from './dto/update-question.dto.js'
 
 import { S3Folder } from '~/types/s3.type.js'
@@ -206,6 +207,98 @@ export class QuestionsService {
         return {
             ...questionData,
             reply_count: _count.replies,
+        }
+    }
+
+    async findSavedQuestions(currentUserId: number, { page, per_page }: GetSavedQuestionsDto) {
+        const where = {
+            user_id: currentUserId,
+        }
+
+        const [savedQuestions, total] = await this.prisma.$transaction([
+            this.prisma.savedQuestion.findMany({
+                where,
+                skip: (page - 1) * per_page,
+                take: per_page,
+                orderBy: [{ created_at: 'desc' }, { question_id: 'desc' }],
+                include: {
+                    question: {
+                        include: {
+                            author: true,
+                            tags: {
+                                include: {
+                                    tag: true,
+                                },
+                            },
+                            attachments: true,
+                            post_score: true,
+                            _count: {
+                                select: {
+                                    replies: true,
+                                },
+                            },
+                        },
+                    },
+                },
+            }),
+            this.prisma.savedQuestion.count({ where }),
+        ])
+
+        const data = savedQuestions.map(({ created_at, question: { _count, ...question } }) => ({
+            ...question,
+            reply_count: _count.replies,
+            saved_at: created_at,
+        }))
+
+        return {
+            data,
+            total,
+            count: data.length,
+            current_page: page,
+            per_page,
+        }
+    }
+
+    async saveQuestion(id: number, currentUserId: number) {
+        const question = await this.prisma.question.findFirst({
+            where: {
+                id,
+                parent_id: null,
+            },
+            select: {
+                id: true,
+            },
+        })
+
+        if (!question) {
+            throw new NotFoundException('Question not found')
+        }
+
+        return this.prisma.savedQuestion.upsert({
+            where: {
+                user_id_question_id: {
+                    user_id: currentUserId,
+                    question_id: id,
+                },
+            },
+            update: {},
+            create: {
+                user_id: currentUserId,
+                question_id: id,
+            },
+        })
+    }
+
+    async removeSavedQuestion(id: number, currentUserId: number) {
+        const { count } = await this.prisma.savedQuestion.deleteMany({
+            where: {
+                user_id: currentUserId,
+                question_id: id,
+            },
+        })
+
+        if (count === 0) {
+            throw new NotFoundException('Saved question not found')
         }
     }
 

@@ -1,12 +1,10 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Patch, Post, Query, Req, UseGuards } from '@nestjs/common'
+import { Body, Controller, Get, HttpCode, HttpStatus, Patch, Post, Req, UseGuards } from '@nestjs/common'
 import { seconds, Throttle } from '@nestjs/throttler'
 
 import { AuthGuard } from '../../common/guards/auth.guard.js'
-import { ResponsePagination } from '../../common/response/response.decorators.js'
 import type { IRequest } from '../../type.js'
 import { AuthService } from './auth.service.js'
 import { ResetPasswordDTO, SendForgotPasswordCodeDTO } from './dto/forgot_password.dto.js'
-import { GetCurrentUserQuestionsDto } from './dto/get-current-user-questions.dto.js'
 import { LoginDTO } from './dto/login.dto.js'
 import { loginWithTokenDTO } from './dto/login_with_token.dto.js'
 import { LogoutDTO } from './dto/logout.dto.js'
@@ -77,18 +75,6 @@ export class AuthController {
         const user = await this.authService.getCurrentUser(req.decoded.sub)
 
         return user
-    }
-
-    @Get('me/questions')
-    @ResponsePagination()
-    getCurrentUserQuestions(@Query() query: GetCurrentUserQuestionsDto, @Req() req: IRequest) {
-        return this.authService.getCurrentUserQuestions(req.decoded.sub, query)
-    }
-
-    @Get('me/answered-questions')
-    @ResponsePagination()
-    getCurrentUserAnsweredQuestions(@Query() query: GetCurrentUserQuestionsDto, @Req() req: IRequest) {
-        return this.authService.getCurrentUserAnsweredQuestions(req.decoded.sub, query)
     }
 
     @Patch('me')

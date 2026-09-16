@@ -16,10 +16,7 @@ import type { StringValue } from 'ms'
 import { PrismaService } from '../../config/prisma/prisma.service.js'
 import { MailProducer } from '../../modules/mail/mail.producer.js'
 import { JwtPayload } from '../../type.js'
-import type { GetCurrentUserQuestionsDto } from './dto/get-current-user-questions.dto.js'
 import type { UpdateCurrentUserDto } from './dto/update-current-user.dto.js'
-
-import type { Prisma } from '~/generated/prisma/client.js'
 
 @Injectable()
 export class AuthService {
@@ -318,76 +315,6 @@ export class AuthService {
                 email: false,
             },
         })
-    }
-
-    async getCurrentUserQuestions(currentUserId: number, query: GetCurrentUserQuestionsDto) {
-        return this.getPaginatedQuestions({
-            ...query,
-            where: {
-                author_id: currentUserId,
-                parent_id: null,
-            },
-        })
-    }
-
-    async getCurrentUserAnsweredQuestions(currentUserId: number, query: GetCurrentUserQuestionsDto) {
-        return this.getPaginatedQuestions({
-            ...query,
-            where: {
-                parent_id: null,
-                replies: {
-                    some: {
-                        author_id: currentUserId,
-                    },
-                },
-            },
-        })
-    }
-
-    private async getPaginatedQuestions({
-        where,
-        page,
-        per_page,
-    }: GetCurrentUserQuestionsDto & {
-        where: Prisma.QuestionWhereInput
-    }) {
-        const [questions, total] = await this.prisma.$transaction([
-            this.prisma.question.findMany({
-                where,
-                skip: (page - 1) * per_page,
-                take: per_page,
-                orderBy: [{ created_at: 'desc' }, { id: 'desc' }],
-                include: {
-                    author: true,
-                    tags: {
-                        include: {
-                            tag: true,
-                        },
-                    },
-                    attachments: true,
-                    post_score: true,
-                    _count: {
-                        select: {
-                            replies: true,
-                        },
-                    },
-                },
-            }),
-            this.prisma.question.count({ where }),
-        ])
-
-        const data = questions.map(({ _count, ...question }) => ({
-            ...question,
-            reply_count: _count.replies,
-        }))
-
-        return {
-            data,
-            total,
-            count: data.length,
-            current_page: page,
-            per_page,
-        }
     }
 
     async loginWithToken(token: string) {

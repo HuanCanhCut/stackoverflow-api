@@ -19,6 +19,7 @@ import type { IRequest } from '../../type.js'
 import { CreateQuestionDto } from './dto/create-question.dto.js'
 import { GetQuestionRepliesDto } from './dto/get-question-replies.dto.js'
 import { GetQuestionsDto } from './dto/get-questions.dto.js'
+import { GetSavedQuestionsDto } from './dto/get-saved-questions.dto.js'
 import { UpdateQuestionDto } from './dto/update-question.dto.js'
 import { QuestionsService } from './questions.service.js'
 
@@ -40,6 +41,13 @@ export class QuestionsController {
         return this.questionsService.findAll(query)
     }
 
+    @Get('saved')
+    @UseGuards(AuthGuard)
+    @ResponsePagination()
+    findSavedQuestions(@Query() query: GetSavedQuestionsDto, @Req() req: IRequest) {
+        return this.questionsService.findSavedQuestions(req.decoded.sub, query)
+    }
+
     @Get(':id/replies')
     @ResponsePagination()
     findReplies(@Param('id', ParseIntPipe) id: number, @Query() query: GetQuestionRepliesDto) {
@@ -49,6 +57,19 @@ export class QuestionsController {
     @Get(':id')
     findOne(@Param('id', ParseIntPipe) id: number) {
         return this.questionsService.findOne(id)
+    }
+
+    @Post(':id/save')
+    @UseGuards(AuthGuard)
+    saveQuestion(@Param('id', ParseIntPipe) id: number, @Req() req: IRequest) {
+        return this.questionsService.saveQuestion(id, req.decoded.sub)
+    }
+
+    @Delete(':id/save')
+    @HttpCode(HttpStatus.NO_CONTENT)
+    @UseGuards(AuthGuard)
+    removeSavedQuestion(@Param('id', ParseIntPipe) id: number, @Req() req: IRequest) {
+        return this.questionsService.removeSavedQuestion(id, req.decoded.sub)
     }
 
     @Patch(':id/upvote')

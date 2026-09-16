@@ -10,6 +10,7 @@ model Question {
   tags        QuestionTag[]
   attachments QuestionAttachment[]
   post_score  PostScore?
+  saved_by    SavedQuestion[]
   vote_count  Int                  @default(0)
   created_at  DateTime             @default(now())
   updated_at  DateTime             @updatedAt

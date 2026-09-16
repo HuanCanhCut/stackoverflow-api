@@ -9,6 +9,7 @@ import { NotificationsModule } from './api/notifications/notifications.module.js
 import { QuestionsModule } from './api/questions/questions.module.js'
 import { TagsModule } from './api/tags/tags.module.js'
 import { UploadsModule } from './api/uploads/uploads.module.js'
+import { UsersModule } from './api/users/users.module.js'
 import { AppController } from './app.controller.js'
 import { HttpLoggingInterceptor } from './common/interceptors/http-logging.interceptor.js'
 import { ResponseInterceptor } from './common/interceptors/response.interceptor.js'
@@ -58,6 +59,7 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule()
         UploadsModule,
         NotificationsModule,
         TagsModule,
+        UsersModule,
     ],
 
     controllers: [AppController],

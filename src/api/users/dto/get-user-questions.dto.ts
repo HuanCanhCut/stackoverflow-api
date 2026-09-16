@@ -1,7 +1,7 @@
 import { Type } from 'class-transformer'
 import { IsInt, Max, Min } from 'class-validator'
 
-export class GetCurrentUserQuestionsDto {
+export class GetUserQuestionsDto {
     @Type(() => Number)
     @IsInt({ message: 'Page phải là số nguyên' })
     @Min(1, { message: 'Page phải lớn hơn hoặc bằng 1' })

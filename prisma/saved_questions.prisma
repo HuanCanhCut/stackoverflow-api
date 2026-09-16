@@ -1,0 +1,11 @@
+model SavedQuestion {
+  user_id     Int
+  question_id Int
+  created_at  DateTime @default(now())
+  user        User     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  question    Question @relation(fields: [question_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@id([user_id, question_id])
+  @@index([user_id, created_at])
+  @@map("saved_questions")
+}

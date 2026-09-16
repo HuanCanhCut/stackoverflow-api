@@ -1,11 +1,11 @@
 info:
-  name: "[Auth] Get my answered questions"
+  name: "[Auth] Get saved questions"
   type: http
-  seq: 10
+  seq: 9
 
 http:
   method: GET
-  url: "{{API_ENDPOINT}}/auth/me/answered-questions?page=1&per_page=10"
+  url: "{{API_ENDPOINT}}/questions/saved?page=1&per_page=10"
   params:
     - name: page
       value: "1"

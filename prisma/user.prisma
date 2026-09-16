@@ -29,6 +29,7 @@ model User {
   blocked_by_user         User?                   @relation("UserBlockedBy", fields: [blocked_by], references: [id], onDelete: SetNull, onUpdate: Cascade)
   blocked_users           User[]                  @relation("UserBlockedBy")
   questions               Question[]              @relation("author")
+  saved_questions         SavedQuestion[]
   notifications           Notification[]          @relation("NotificationActor")
   notification_recipients NotificationRecipient[] @relation("NotificationRecipientUser")
   refresh_tokens          RefreshToken[]
