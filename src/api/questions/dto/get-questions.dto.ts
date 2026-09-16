@@ -1,7 +1,13 @@
 import { Type } from 'class-transformer'
-import { IsInt, Max, Min } from 'class-validator'
+import { IsInt, IsOptional, Max, Min } from 'class-validator'
 
 export class GetQuestionsDto {
+    @IsOptional()
+    @Type(() => Number)
+    @IsInt({ message: 'Tag_id phải là số nguyên' })
+    @Min(1, { message: 'Tag_id phải lớn hơn hoặc bằng 1' })
+    tag_id?: number
+
     @Type(() => Number)
     @IsInt({ message: 'Page phải là số nguyên' })
     @Min(1, { message: 'Page phải lớn hơn hoặc bằng 1' })

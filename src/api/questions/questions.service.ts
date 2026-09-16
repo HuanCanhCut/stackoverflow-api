@@ -114,12 +114,21 @@ export class QuestionsService {
         })
     }
 
-    async findAll({ page, per_page }: GetQuestionsDto) {
+    async findAll({ tag_id, page, per_page }: GetQuestionsDto) {
+        const where = {
+            parent_id: null,
+            ...(tag_id !== undefined && {
+                tags: {
+                    some: {
+                        tag_id,
+                    },
+                },
+            }),
+        }
+
         const [questions, total] = await this.prisma.$transaction([
             this.prisma.question.findMany({
-                where: {
-                    parent_id: null,
-                },
+                where,
                 skip: (page - 1) * per_page,
                 take: per_page,
                 orderBy: [
@@ -148,9 +157,7 @@ export class QuestionsService {
                 },
             }),
             this.prisma.question.count({
-                where: {
-                    parent_id: null,
-                },
+                where,
             }),
         ])
 
