@@ -375,6 +375,11 @@ export class QuestionsService {
                     },
                     attachments: true,
                     post_score: true,
+                    _count: {
+                        select: {
+                            replies: true,
+                        },
+                    },
                 },
             }),
             this.prisma.question.count({
@@ -384,8 +389,14 @@ export class QuestionsService {
             }),
         ])
 
+        // Comment lồng nhiều cấp: client cần reply_count để biết comment nào còn có phản hồi con
+        const repliesWithReplyCount = replies.map(({ _count, ...reply }) => ({
+            ...reply,
+            reply_count: _count.replies,
+        }))
+
         return {
-            data: await this.withViewerState(replies, currentUserId),
+            data: await this.withViewerState(repliesWithReplyCount, currentUserId),
             total,
             count: replies.length,
             current_page: page,
