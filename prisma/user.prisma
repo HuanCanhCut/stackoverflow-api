@@ -30,6 +30,7 @@ model User {
   blocked_users           User[]                  @relation("UserBlockedBy")
   questions               Question[]              @relation("author")
   saved_questions         SavedQuestion[]
+  question_votes          QuestionVote[]
   notifications           Notification[]          @relation("NotificationActor")
   notification_recipients NotificationRecipient[] @relation("NotificationRecipientUser")
   refresh_tokens          RefreshToken[]

@@ -11,6 +11,7 @@ model Question {
   attachments QuestionAttachment[]
   post_score  PostScore?
   saved_by    SavedQuestion[]
+  votes       QuestionVote[]
   vote_count  Int                  @default(0)
   created_at  DateTime             @default(now())
   updated_at  DateTime             @updatedAt
