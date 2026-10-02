@@ -1,22 +1,33 @@
+enum EnumModerationStatus {
+  pending  @map("pending")
+  approved @map("approved")
+  rejected @map("rejected")
+}
+
 model Question {
-  id          Int                  @id @default(autoincrement())
-  title       String               @db.VarChar(255)
-  body        String               @db.Text
-  author_id   Int
-  parent_id   Int?
-  author      User                 @relation("author", fields: [author_id], references: [id], onUpdate: Cascade, onDelete: Cascade)
-  parent      Question?            @relation("QuestionReplies", fields: [parent_id], references: [id], onUpdate: Cascade, onDelete: Cascade)
-  replies     Question[]           @relation("QuestionReplies")
-  tags        QuestionTag[]
-  attachments QuestionAttachment[]
-  post_score  PostScore?
-  saved_by    SavedQuestion[]
-  votes       QuestionVote[]
-  vote_count  Int                  @default(0)
-  created_at  DateTime             @default(now())
-  updated_at  DateTime             @updatedAt
+  id                Int                  @id @default(autoincrement())
+  title             String               @db.VarChar(255)
+  body              String               @db.Text
+  author_id         Int
+  parent_id         Int?
+  author            User                 @relation("author", fields: [author_id], references: [id], onUpdate: Cascade, onDelete: Cascade)
+  parent            Question?            @relation("QuestionReplies", fields: [parent_id], references: [id], onUpdate: Cascade, onDelete: Cascade)
+  replies           Question[]           @relation("QuestionReplies")
+  tags              QuestionTag[]
+  attachments       QuestionAttachment[]
+  post_score        PostScore?
+  saved_by          SavedQuestion[]
+  votes             QuestionVote[]
+  vote_count        Int                  @default(0)
+  // Kiểm duyệt nội dung bằng LLM (background job). pending vẫn hiển thị, rejected bị ẩn với người khác
+  moderation_status EnumModerationStatus @default(pending)
+  moderation_reason String?              @db.VarChar(500)
+  moderated_at      DateTime?
+  created_at        DateTime             @default(now())
+  updated_at        DateTime             @updatedAt
 
   @@index([parent_id])
   @@index([created_at])
+  @@index([moderation_status])
   @@map("questions")
 }

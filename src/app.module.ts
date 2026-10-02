@@ -22,6 +22,7 @@ import { MailModule } from './modules/mail/mail.module.js'
 import { NodemailerModule } from './modules/nodemailer/nodemailer.module.js'
 import { QuestionScoreModule } from './modules/question_score/question_score.module.js'
 import { RateLimitModule } from './modules/rate_limit/rate_limit.module.js'
+import { SocketModule } from './modules/socket/socket.module.js'
 import { QueueModule } from './queue/queue.module.js'
 
 export const { ObserveModule, ObserveInstrument } = createObserveModule()
@@ -50,6 +51,7 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule()
         PrismaModule,
         S3Module,
         QueueModule,
+        SocketModule,
         NodemailerModule,
         RateLimitModule,
         JwtTokenModule,

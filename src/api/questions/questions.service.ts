@@ -1,6 +1,7 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common'
 
 import { PrismaService } from '../../config/prisma/prisma.service.js'
+import { ModerationProducer } from '../../modules/moderation/moderation.producer.js'
 import { UploadsService } from '../uploads/uploads.service.js'
 import { CreateQuestionDto } from './dto/create-question.dto.js'
 import { GetQuestionRepliesDto, QuestionRepliesOrderBy } from './dto/get-question-replies.dto.js'
@@ -12,6 +13,21 @@ import { S3Folder } from '~/types/s3.type.js'
 
 type TransactionClient = Parameters<Parameters<PrismaService['$transaction']>[0]>[0]
 
+// Nội dung bị LLM đánh giá vi phạm sẽ bị ẩn với mọi người, trừ tác giả (để xem lý do)
+const NOT_REJECTED = { moderation_status: { not: 'rejected' as const } }
+
+const visibleTo = (currentUserId?: number) =>
+    currentUserId === undefined ? NOT_REJECTED : { OR: [NOT_REJECTED, { author_id: currentUserId }] }
+
+// Chỉ đếm phản hồi không bị ẩn
+const visibleReplyCount = {
+    _count: {
+        select: {
+            replies: { where: NOT_REJECTED },
+        },
+    },
+}
+
 export enum VoteType {
     Upvote = 1,
     Downvote = -1,
@@ -22,6 +38,7 @@ export class QuestionsService {
     constructor(
         private readonly prisma: PrismaService,
         private readonly uploadService: UploadsService,
+        private readonly moderationProducer: ModerationProducer,
     ) {}
 
     private async resolveTags(tx: TransactionClient, inputTags: CreateQuestionDto['tags']) {
@@ -98,7 +115,7 @@ export class QuestionsService {
             folder: S3Folder.QUESTIONS,
         })
 
-        return this.prisma.$transaction(async (tx) => {
+        const question = await this.prisma.$transaction(async (tx) => {
             if (createQuestionDto.parent_id != null) {
                 const parent = await tx.question.findUnique({
                     where: {
@@ -150,11 +167,16 @@ export class QuestionsService {
                 },
             })
         })
+
+        await this.moderationProducer.moderateQuestion(question)
+
+        return question
     }
 
     async findAll({ tag_id, page, per_page }: GetQuestionsDto, currentUserId?: number) {
         const where = {
             parent_id: null,
+            ...NOT_REJECTED,
             ...(tag_id !== undefined && {
                 tags: {
                     some: {
@@ -187,11 +209,7 @@ export class QuestionsService {
                     },
                     attachments: true,
                     post_score: true,
-                    _count: {
-                        select: {
-                            replies: true,
-                        },
-                    },
+                    ...visibleReplyCount,
                 },
             }),
             this.prisma.question.count({
@@ -227,15 +245,11 @@ export class QuestionsService {
                 },
                 attachments: true,
                 post_score: true,
-                _count: {
-                    select: {
-                        replies: true,
-                    },
-                },
+                ...visibleReplyCount,
             },
         })
 
-        if (!question) {
+        if (!question || (question.moderation_status === 'rejected' && question.author_id !== currentUserId)) {
             throw new NotFoundException('Question not found')
         }
 
@@ -252,6 +266,7 @@ export class QuestionsService {
     async findSavedQuestions(currentUserId: number, { page, per_page }: GetSavedQuestionsDto) {
         const where = {
             user_id: currentUserId,
+            question: NOT_REJECTED,
         }
 
         const [savedQuestions, total] = await this.prisma.$transaction([
@@ -271,11 +286,7 @@ export class QuestionsService {
                             },
                             attachments: true,
                             post_score: true,
-                            _count: {
-                                select: {
-                                    replies: true,
-                                },
-                            },
+                            ...visibleReplyCount,
                         },
                     },
                 },
@@ -355,11 +366,14 @@ export class QuestionsService {
             throw new NotFoundException('Question not found')
         }
 
+        const where = {
+            parent_id: parentId,
+            ...visibleTo(currentUserId),
+        }
+
         const [replies, total] = await this.prisma.$transaction([
             this.prisma.question.findMany({
-                where: {
-                    parent_id: parentId,
-                },
+                where,
                 skip: (page - 1) * per_page,
                 take: per_page,
                 orderBy:
@@ -375,17 +389,11 @@ export class QuestionsService {
                     },
                     attachments: true,
                     post_score: true,
-                    _count: {
-                        select: {
-                            replies: true,
-                        },
-                    },
+                    ...visibleReplyCount,
                 },
             }),
             this.prisma.question.count({
-                where: {
-                    parent_id: parentId,
-                },
+                where,
             }),
         ])
 
@@ -432,7 +440,9 @@ export class QuestionsService {
 
             const existingVote = await tx.questionVote.findUnique({ where })
             const previousValue = existingVote?.value ?? 0
-            const nextValue = previousValue === type ? 0 : type
+            // Giá trị lưu trong DB là số (1 / -1), đổi enum về số để so sánh
+            const voteValue: number = type
+            const nextValue = previousValue === voteValue ? 0 : voteValue
 
             if (nextValue === 0) {
                 await tx.questionVote.delete({ where })
@@ -477,7 +487,7 @@ export class QuestionsService {
         updateQuestionDto: UpdateQuestionDto
         currentUserId: number
     }) {
-        return this.prisma.$transaction(async (tx) => {
+        const { updatedQuestion, contentChanged } = await this.prisma.$transaction(async (tx) => {
             const question = await tx.question.findUnique({
                 where: {
                     id,
@@ -493,14 +503,24 @@ export class QuestionsService {
             }
 
             const tags = updateQuestionDto.tags ? await this.resolveTags(tx, updateQuestionDto.tags) : undefined
+            // Sửa tiêu đề / nội dung thì phải kiểm duyệt lại, chỉ sửa tag thì không
+            const contentChanged =
+                (updateQuestionDto.title !== undefined && updateQuestionDto.title !== question.title) ||
+                (updateQuestionDto.body !== undefined && updateQuestionDto.body !== question.body)
 
-            return tx.question.update({
+            const updatedQuestion = await tx.question.update({
                 where: {
                     id,
                 },
                 data: {
                     title: updateQuestionDto.title,
                     body: updateQuestionDto.body,
+
+                    ...(contentChanged && {
+                        moderation_status: 'pending',
+                        moderation_reason: null,
+                        moderated_at: null,
+                    }),
 
                     ...(tags !== undefined && {
                         tags: {
@@ -522,7 +542,15 @@ export class QuestionsService {
                     },
                 },
             })
+
+            return { updatedQuestion, contentChanged }
         })
+
+        if (contentChanged) {
+            await this.moderationProducer.moderateQuestion(updatedQuestion)
+        }
+
+        return updatedQuestion
     }
 
     async remove({ id, currentUserId }: { id: number; currentUserId: number }) {
