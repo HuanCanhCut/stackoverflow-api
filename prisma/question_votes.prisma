@@ -1,0 +1,14 @@
+model QuestionVote {
+  user_id     Int
+  question_id Int
+  // 1 = upvote, -1 = downvote
+  value       Int      @db.TinyInt
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+  user        User     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  question    Question @relation(fields: [question_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@id([user_id, question_id])
+  @@index([question_id])
+  @@map("question_votes")
+}

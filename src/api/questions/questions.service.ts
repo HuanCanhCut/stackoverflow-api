@@ -1,6 +1,7 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common'
 
 import { PrismaService } from '../../config/prisma/prisma.service.js'
+import { ModerationProducer } from '../../modules/moderation/moderation.producer.js'
 import { UploadsService } from '../uploads/uploads.service.js'
 import { CreateQuestionDto } from './dto/create-question.dto.js'
 import { GetQuestionRepliesDto, QuestionRepliesOrderBy } from './dto/get-question-replies.dto.js'
@@ -12,11 +13,32 @@ import { S3Folder } from '~/types/s3.type.js'
 
 type TransactionClient = Parameters<Parameters<PrismaService['$transaction']>[0]>[0]
 
+// Nội dung bị LLM đánh giá vi phạm sẽ bị ẩn với mọi người, trừ tác giả (để xem lý do)
+const NOT_REJECTED = { moderation_status: { not: 'rejected' as const } }
+
+const visibleTo = (currentUserId?: number) =>
+    currentUserId === undefined ? NOT_REJECTED : { OR: [NOT_REJECTED, { author_id: currentUserId }] }
+
+// Chỉ đếm phản hồi không bị ẩn
+const visibleReplyCount = {
+    _count: {
+        select: {
+            replies: { where: NOT_REJECTED },
+        },
+    },
+}
+
+export enum VoteType {
+    Upvote = 1,
+    Downvote = -1,
+}
+
 @Injectable()
 export class QuestionsService {
     constructor(
         private readonly prisma: PrismaService,
         private readonly uploadService: UploadsService,
+        private readonly moderationProducer: ModerationProducer,
     ) {}
 
     private async resolveTags(tx: TransactionClient, inputTags: CreateQuestionDto['tags']) {
@@ -54,6 +76,38 @@ export class QuestionsService {
         return [...existingTags, ...newTags]
     }
 
+    /**
+     * Gắn trạng thái của người xem (đã vote gì, đã lưu chưa) vào danh sách câu hỏi.
+     * Khách (không đăng nhập) luôn nhận my_vote = 0, is_saved = false.
+     */
+    private async withViewerState<T extends { id: number }>(questions: T[], currentUserId?: number) {
+        if (currentUserId === undefined || questions.length === 0) {
+            return questions.map((question) => ({ ...question, my_vote: 0, is_saved: false }))
+        }
+
+        const questionIds = questions.map((question) => question.id)
+
+        const [votes, savedQuestions] = await this.prisma.$transaction([
+            this.prisma.questionVote.findMany({
+                where: { user_id: currentUserId, question_id: { in: questionIds } },
+                select: { question_id: true, value: true },
+            }),
+            this.prisma.savedQuestion.findMany({
+                where: { user_id: currentUserId, question_id: { in: questionIds } },
+                select: { question_id: true },
+            }),
+        ])
+
+        const voteByQuestionId = new Map(votes.map((vote) => [vote.question_id, vote.value]))
+        const savedQuestionIds = new Set(savedQuestions.map((saved) => saved.question_id))
+
+        return questions.map((question) => ({
+            ...question,
+            my_vote: voteByQuestionId.get(question.id) ?? 0,
+            is_saved: savedQuestionIds.has(question.id),
+        }))
+    }
+
     async create(createQuestionDto: CreateQuestionDto, authorId: number) {
         const objectKeys = await this.uploadService.verifyUploadIds({
             uploadIds: createQuestionDto.upload_ids,
@@ -61,7 +115,7 @@ export class QuestionsService {
             folder: S3Folder.QUESTIONS,
         })
 
-        return this.prisma.$transaction(async (tx) => {
+        const question = await this.prisma.$transaction(async (tx) => {
             if (createQuestionDto.parent_id != null) {
                 const parent = await tx.question.findUnique({
                     where: {
@@ -113,11 +167,16 @@ export class QuestionsService {
                 },
             })
         })
+
+        await this.moderationProducer.moderateQuestion(question)
+
+        return question
     }
 
-    async findAll({ tag_id, page, per_page }: GetQuestionsDto) {
+    async findAll({ tag_id, page, per_page }: GetQuestionsDto, currentUserId?: number) {
         const where = {
             parent_id: null,
+            ...NOT_REJECTED,
             ...(tag_id !== undefined && {
                 tags: {
                     some: {
@@ -150,11 +209,7 @@ export class QuestionsService {
                     },
                     attachments: true,
                     post_score: true,
-                    _count: {
-                        select: {
-                            replies: true,
-                        },
-                    },
+                    ...visibleReplyCount,
                 },
             }),
             this.prisma.question.count({
@@ -168,7 +223,7 @@ export class QuestionsService {
         }))
 
         return {
-            data: questionsWithReplyCount,
+            data: await this.withViewerState(questionsWithReplyCount, currentUserId),
             total,
             count: questionsWithReplyCount.length,
             current_page: page,
@@ -176,7 +231,7 @@ export class QuestionsService {
         }
     }
 
-    async findOne(id: number) {
+    async findOne(id: number, currentUserId?: number) {
         const question = await this.prisma.question.findUnique({
             where: {
                 id,
@@ -190,29 +245,28 @@ export class QuestionsService {
                 },
                 attachments: true,
                 post_score: true,
-                _count: {
-                    select: {
-                        replies: true,
-                    },
-                },
+                ...visibleReplyCount,
             },
         })
 
-        if (!question) {
+        if (!question || (question.moderation_status === 'rejected' && question.author_id !== currentUserId)) {
             throw new NotFoundException('Question not found')
         }
 
         const { _count, ...questionData } = question
 
-        return {
-            ...questionData,
-            reply_count: _count.replies,
-        }
+        const [questionWithViewerState] = await this.withViewerState(
+            [{ ...questionData, reply_count: _count.replies }],
+            currentUserId,
+        )
+
+        return questionWithViewerState
     }
 
     async findSavedQuestions(currentUserId: number, { page, per_page }: GetSavedQuestionsDto) {
         const where = {
             user_id: currentUserId,
+            question: NOT_REJECTED,
         }
 
         const [savedQuestions, total] = await this.prisma.$transaction([
@@ -232,11 +286,7 @@ export class QuestionsService {
                             },
                             attachments: true,
                             post_score: true,
-                            _count: {
-                                select: {
-                                    replies: true,
-                                },
-                            },
+                            ...visibleReplyCount,
                         },
                     },
                 },
@@ -302,7 +352,7 @@ export class QuestionsService {
         }
     }
 
-    async findReplies(parentId: number, { order_by, page, per_page }: GetQuestionRepliesDto) {
+    async findReplies(parentId: number, { order_by, page, per_page }: GetQuestionRepliesDto, currentUserId?: number) {
         const parent = await this.prisma.question.findUnique({
             where: {
                 id: parentId,
@@ -316,11 +366,14 @@ export class QuestionsService {
             throw new NotFoundException('Question not found')
         }
 
+        const where = {
+            parent_id: parentId,
+            ...visibleTo(currentUserId),
+        }
+
         const [replies, total] = await this.prisma.$transaction([
             this.prisma.question.findMany({
-                where: {
-                    parent_id: parentId,
-                },
+                where,
                 skip: (page - 1) * per_page,
                 take: per_page,
                 orderBy:
@@ -328,14 +381,7 @@ export class QuestionsService {
                         ? [{ vote_count: 'desc' }, { created_at: 'desc' }, { id: 'desc' }]
                         : [{ created_at: 'desc' }, { id: 'desc' }],
                 include: {
-                    author: {
-                        omit: {
-                            password: false,
-                            email: false,
-                            sign_in_provider: false,
-                            provider_uid: false,
-                        },
-                    },
+                    author: true,
                     tags: {
                         include: {
                             tag: true,
@@ -343,17 +389,22 @@ export class QuestionsService {
                     },
                     attachments: true,
                     post_score: true,
+                    ...visibleReplyCount,
                 },
             }),
             this.prisma.question.count({
-                where: {
-                    parent_id: parentId,
-                },
+                where,
             }),
         ])
 
+        // Comment lồng nhiều cấp: client cần reply_count để biết comment nào còn có phản hồi con
+        const repliesWithReplyCount = replies.map(({ _count, ...reply }) => ({
+            ...reply,
+            reply_count: _count.replies,
+        }))
+
         return {
-            data: replies,
+            data: await this.withViewerState(repliesWithReplyCount, currentUserId),
             total,
             count: replies.length,
             current_page: page,
@@ -361,35 +412,69 @@ export class QuestionsService {
         }
     }
 
-    async upvote(id: number) {
-        return this.updateVotes(id, 'increment')
-    }
+    /**
+     * Vote kiểu toggle: vote lại cùng chiều thì bỏ vote, vote ngược chiều thì đổi vote.
+     * vote_count được cập nhật theo chênh lệch trong cùng transaction.
+     */
+    async vote({ id, type, currentUserId }: { id: number; type: VoteType; currentUserId: number }) {
+        return this.prisma.$transaction(async (tx) => {
+            const question = await tx.question.findUnique({
+                where: {
+                    id,
+                },
+                select: {
+                    id: true,
+                },
+            })
 
-    async downvote(id: number) {
-        return this.updateVotes(id, 'decrement')
-    }
+            if (!question) {
+                throw new NotFoundException('Question not found')
+            }
 
-    private async updateVotes(id: number, operation: 'increment' | 'decrement') {
-        const question = await this.prisma.question.findUnique({
-            where: {
-                id,
-            },
-            select: {
-                id: true,
-            },
-        })
+            const where = {
+                user_id_question_id: {
+                    user_id: currentUserId,
+                    question_id: id,
+                },
+            }
 
-        if (!question) {
-            throw new NotFoundException('Question not found')
-        }
+            const existingVote = await tx.questionVote.findUnique({ where })
+            const previousValue = existingVote?.value ?? 0
+            // Giá trị lưu trong DB là số (1 / -1), đổi enum về số để so sánh
+            const voteValue: number = type
+            const nextValue = previousValue === voteValue ? 0 : voteValue
 
-        return this.prisma.question.update({
-            where: {
-                id,
-            },
-            data: {
-                vote_count: operation === 'increment' ? { increment: 1 } : { decrement: 1 },
-            },
+            if (nextValue === 0) {
+                await tx.questionVote.delete({ where })
+            } else if (existingVote) {
+                await tx.questionVote.update({ where, data: { value: nextValue } })
+            } else {
+                await tx.questionVote.create({
+                    data: {
+                        user_id: currentUserId,
+                        question_id: id,
+                        value: nextValue,
+                    },
+                })
+            }
+
+            const updatedQuestion = await tx.question.update({
+                where: {
+                    id,
+                },
+                data: {
+                    vote_count: { increment: nextValue - previousValue },
+                },
+                select: {
+                    id: true,
+                    vote_count: true,
+                },
+            })
+
+            return {
+                ...updatedQuestion,
+                my_vote: nextValue,
+            }
         })
     }
 
@@ -402,7 +487,7 @@ export class QuestionsService {
         updateQuestionDto: UpdateQuestionDto
         currentUserId: number
     }) {
-        return this.prisma.$transaction(async (tx) => {
+        const { updatedQuestion, contentChanged } = await this.prisma.$transaction(async (tx) => {
             const question = await tx.question.findUnique({
                 where: {
                     id,
@@ -418,14 +503,24 @@ export class QuestionsService {
             }
 
             const tags = updateQuestionDto.tags ? await this.resolveTags(tx, updateQuestionDto.tags) : undefined
+            // Sửa tiêu đề / nội dung thì phải kiểm duyệt lại, chỉ sửa tag thì không
+            const contentChanged =
+                (updateQuestionDto.title !== undefined && updateQuestionDto.title !== question.title) ||
+                (updateQuestionDto.body !== undefined && updateQuestionDto.body !== question.body)
 
-            return tx.question.update({
+            const updatedQuestion = await tx.question.update({
                 where: {
                     id,
                 },
                 data: {
                     title: updateQuestionDto.title,
                     body: updateQuestionDto.body,
+
+                    ...(contentChanged && {
+                        moderation_status: 'pending',
+                        moderation_reason: null,
+                        moderated_at: null,
+                    }),
 
                     ...(tags !== undefined && {
                         tags: {
@@ -447,7 +542,15 @@ export class QuestionsService {
                     },
                 },
             })
+
+            return { updatedQuestion, contentChanged }
         })
+
+        if (contentChanged) {
+            await this.moderationProducer.moderateQuestion(updatedQuestion)
+        }
+
+        return updatedQuestion
     }
 
     async remove({ id, currentUserId }: { id: number; currentUserId: number }) {

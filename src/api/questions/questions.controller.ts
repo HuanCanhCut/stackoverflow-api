@@ -15,13 +15,14 @@ import {
 } from '@nestjs/common'
 
 import { AuthGuard } from '../../common/guards/auth.guard.js'
+import { OptionalAuthGuard } from '../../common/guards/optional-auth.guard.js'
 import type { IRequest } from '../../type.js'
 import { CreateQuestionDto } from './dto/create-question.dto.js'
 import { GetQuestionRepliesDto } from './dto/get-question-replies.dto.js'
 import { GetQuestionsDto } from './dto/get-questions.dto.js'
 import { GetSavedQuestionsDto } from './dto/get-saved-questions.dto.js'
 import { UpdateQuestionDto } from './dto/update-question.dto.js'
-import { QuestionsService } from './questions.service.js'
+import { QuestionsService, VoteType } from './questions.service.js'
 
 import { ResponsePagination } from '~/common/response/response.decorators.js'
 
@@ -36,9 +37,10 @@ export class QuestionsController {
     }
 
     @Get()
+    @UseGuards(OptionalAuthGuard)
     @ResponsePagination()
-    findAll(@Query() query: GetQuestionsDto) {
-        return this.questionsService.findAll(query)
+    findAll(@Query() query: GetQuestionsDto, @Req() req: IRequest) {
+        return this.questionsService.findAll(query, req.decoded?.sub)
     }
 
     @Get('saved')
@@ -49,14 +51,16 @@ export class QuestionsController {
     }
 
     @Get(':id/replies')
+    @UseGuards(OptionalAuthGuard)
     @ResponsePagination()
-    findReplies(@Param('id', ParseIntPipe) id: number, @Query() query: GetQuestionRepliesDto) {
-        return this.questionsService.findReplies(id, query)
+    findReplies(@Param('id', ParseIntPipe) id: number, @Query() query: GetQuestionRepliesDto, @Req() req: IRequest) {
+        return this.questionsService.findReplies(id, query, req.decoded?.sub)
     }
 
     @Get(':id')
-    findOne(@Param('id', ParseIntPipe) id: number) {
-        return this.questionsService.findOne(id)
+    @UseGuards(OptionalAuthGuard)
+    findOne(@Param('id', ParseIntPipe) id: number, @Req() req: IRequest) {
+        return this.questionsService.findOne(id, req.decoded?.sub)
     }
 
     @Post(':id/save')
@@ -74,14 +78,22 @@ export class QuestionsController {
 
     @Patch(':id/upvote')
     @UseGuards(AuthGuard)
-    upvote(@Param('id', ParseIntPipe) id: number) {
-        return this.questionsService.upvote(id)
+    upvote(@Param('id', ParseIntPipe) id: number, @Req() req: IRequest) {
+        return this.questionsService.vote({
+            id,
+            type: VoteType.Upvote,
+            currentUserId: req.decoded.sub,
+        })
     }
 
     @Patch(':id/downvote')
     @UseGuards(AuthGuard)
-    downvote(@Param('id', ParseIntPipe) id: number) {
-        return this.questionsService.downvote(id)
+    downvote(@Param('id', ParseIntPipe) id: number, @Req() req: IRequest) {
+        return this.questionsService.vote({
+            id,
+            type: VoteType.Downvote,
+            currentUserId: req.decoded.sub,
+        })
     }
 
     @Patch(':id')

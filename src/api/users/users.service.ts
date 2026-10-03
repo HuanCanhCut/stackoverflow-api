@@ -59,9 +59,12 @@ export class UsersService {
     }: GetUserQuestionsDto & {
         where: Prisma.QuestionWhereInput
     }) {
+        // Không liệt kê nội dung bị kiểm duyệt ẩn đi
+        const visibleWhere: Prisma.QuestionWhereInput = { AND: [where, { moderation_status: { not: 'rejected' } }] }
+
         const [questions, total] = await this.prisma.$transaction([
             this.prisma.question.findMany({
-                where,
+                where: visibleWhere,
                 skip: (page - 1) * per_page,
                 take: per_page,
                 orderBy: [{ created_at: 'desc' }, { id: 'desc' }],
@@ -76,12 +79,12 @@ export class UsersService {
                     post_score: true,
                     _count: {
                         select: {
-                            replies: true,
+                            replies: { where: { moderation_status: { not: 'rejected' } } },
                         },
                     },
                 },
             }),
-            this.prisma.question.count({ where }),
+            this.prisma.question.count({ where: visibleWhere }),
         ])
 
         const data = questions.map(({ _count, ...question }) => ({
