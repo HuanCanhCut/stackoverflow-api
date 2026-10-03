@@ -19,4 +19,11 @@ export class UsersController {
     findAnsweredQuestions(@Param('id', ParseIntPipe) id: number, @Query() query: GetUserQuestionsDto) {
         return this.usersService.findAnsweredQuestions(id, query)
     }
+
+    // Các câu trả lời do chính người dùng viết (trả lời câu hỏi và phản hồi câu trả lời khác)
+    @Get(':id/answers')
+    @ResponsePagination()
+    findAnswers(@Param('id', ParseIntPipe) id: number, @Query() query: GetUserQuestionsDto) {
+        return this.usersService.findAnswers(id, query)
+    }
 }

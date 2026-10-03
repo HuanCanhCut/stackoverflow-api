@@ -560,14 +560,54 @@ export class QuestionsService {
             },
         })
 
-        if (question?.author_id !== currentUserId) {
+        if (!question) {
+            throw new NotFoundException('Question not found')
+        }
+
+        if (question.author_id !== currentUserId) {
             throw new ForbiddenException('You are not the author of this question')
         }
 
-        await this.prisma.question.delete({
-            where: {
-                id,
-            },
+        // Xóa câu hỏi kèm toàn bộ câu trả lời (bao gồm cả reply lồng nhau).
+        // FK tự tham chiếu parent_id khai báo ON DELETE CASCADE nhưng MySQL/MariaDB không kích hoạt
+        // cascade cho quan hệ self-reference, nên phải tự gom và xóa các reply con cháu.
+        // Các bảng liên quan khác (votes, tags, attachments, saved, post_score) vẫn tự cascade theo question_id.
+        await this.prisma.$transaction(async (tx) => {
+            // Gom id các reply theo từng tầng (BFS): levels[0] là reply trực tiếp, sâu dần về sau
+            const levels: number[][] = []
+            let parentIds = [id]
+
+            while (parentIds.length > 0) {
+                const replies = await tx.question.findMany({
+                    where: {
+                        parent_id: { in: parentIds },
+                    },
+                    select: {
+                        id: true,
+                    },
+                })
+
+                parentIds = replies.map((reply) => reply.id)
+
+                if (parentIds.length > 0) {
+                    levels.push(parentIds)
+                }
+            }
+
+            // Xóa từ tầng sâu nhất lên để không vi phạm khóa ngoại parent_id, cuối cùng mới xóa câu hỏi gốc
+            for (let i = levels.length - 1; i >= 0; i--) {
+                await tx.question.deleteMany({
+                    where: {
+                        id: { in: levels[i] },
+                    },
+                })
+            }
+
+            await tx.question.delete({
+                where: {
+                    id,
+                },
+            })
         })
 
         return

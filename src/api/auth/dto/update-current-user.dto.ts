@@ -17,10 +17,10 @@ export class UpdateCurrentUserDto {
     @MaxLength(100, { message: 'Nickname không được vượt quá 100 ký tự' })
     nickname?: string
 
+    // Client gửi upload_id của ảnh đã tải lên S3; server tự xác thực và dựng avatar_path công khai
     @IsOptional()
-    @IsString({ message: 'Avatar_path phải là chuỗi' })
-    @MaxLength(191, { message: 'Avatar_path không được vượt quá 191 ký tự' })
-    avatar_path?: string | null
+    @IsString({ message: 'Avatar_upload_id phải là chuỗi' })
+    avatar_upload_id?: string
 
     @IsOptional()
     @IsString({ message: 'Bio phải là chuỗi' })
