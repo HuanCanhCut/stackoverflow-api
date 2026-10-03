@@ -1,7 +1,10 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common'
+import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common'
 
 import { PrismaService } from '../../config/prisma/prisma.service.js'
 import { ModerationProducer } from '../../modules/moderation/moderation.producer.js'
+import { SocketEvent } from '../../modules/socket/socket.enum.js'
+import { SocketGateway } from '../../modules/socket/socket.gateway.js'
+import { NotificationsService } from '../notifications/notifications.service.js'
 import { UploadsService } from '../uploads/uploads.service.js'
 import { CreateQuestionDto } from './dto/create-question.dto.js'
 import { GetQuestionRepliesDto, QuestionRepliesOrderBy } from './dto/get-question-replies.dto.js'
@@ -35,11 +38,75 @@ export enum VoteType {
 
 @Injectable()
 export class QuestionsService {
+    private readonly logger = new Logger(QuestionsService.name)
+
     constructor(
         private readonly prisma: PrismaService,
         private readonly uploadService: UploadsService,
         private readonly moderationProducer: ModerationProducer,
+        private readonly notificationsService: NotificationsService,
+        private readonly socketGateway: SocketGateway,
     ) {}
+
+    // Tìm id câu hỏi gốc (top-level) bằng cách đi ngược theo parent_id.
+    // Dùng để điều hướng thông báo về đúng trang câu hỏi chứa câu trả lời.
+    private async findRootQuestionId(questionId: number): Promise<number> {
+        let currentId = questionId
+
+        // Giới hạn vòng lặp để phòng dữ liệu lỗi gây lặp vô hạn
+        for (let i = 0; i < 20; i++) {
+            const node = await this.prisma.question.findUnique({
+                where: { id: currentId },
+                select: { parent_id: true },
+            })
+
+            if (!node || node.parent_id == null) break
+
+            currentId = node.parent_id
+        }
+
+        return currentId
+    }
+
+    // Lấy tên hiển thị của user để ghép vào nội dung thông báo.
+    // full_name là field tính toán nên tự ghép từ first_name + last_name.
+    private async getUserDisplayName(userId: number): Promise<string> {
+        const user = await this.prisma.user.findUnique({
+            where: { id: userId },
+            select: { first_name: true, last_name: true },
+        })
+
+        return [user?.first_name, user?.last_name].filter(Boolean).join(' ') || 'Ai đó'
+    }
+
+    // Tạo thông báo và đẩy realtime tới người nhận. Lỗi thông báo không được ảnh hưởng hành động chính.
+    private async notifyPostAuthor({
+        content,
+        metadata,
+        recipientId,
+        actorId,
+    }: {
+        content: string
+        metadata: Record<string, unknown>
+        recipientId: number
+        actorId: number
+    }) {
+        try {
+            const notification = await this.notificationsService.create({
+                content,
+                metadata,
+                recipient_ids: [recipientId],
+                actorId,
+            })
+
+            this.socketGateway.emitToUser(recipientId, SocketEvent.NOTIFICATION_CREATED, {
+                id: notification.id,
+                content,
+            })
+        } catch (error) {
+            this.logger.error(`Không thể tạo thông báo cho user ${recipientId}`, error as Error)
+        }
+    }
 
     private async resolveTags(tx: TransactionClient, inputTags: CreateQuestionDto['tags']) {
         const tagIds = inputTags.filter((tag) => tag.id !== null).map((tag) => tag.id!)
@@ -169,6 +236,28 @@ export class QuestionsService {
         })
 
         await this.moderationProducer.moderateQuestion(question)
+
+        // Có người trả lời/phản hồi -> thông báo cho tác giả của bài bị trả lời (bỏ qua nếu tự trả lời mình)
+        if (createQuestionDto.parent_id != null) {
+            const parent = await this.prisma.question.findUnique({
+                where: { id: createQuestionDto.parent_id },
+                select: { author_id: true, parent_id: true },
+            })
+
+            if (parent && parent.author_id !== authorId) {
+                const rootId = await this.findRootQuestionId(createQuestionDto.parent_id)
+                const actorName = await this.getUserDisplayName(authorId)
+                // parent là câu hỏi gốc -> "trả lời câu hỏi", parent là câu trả lời -> "phản hồi câu trả lời"
+                const repliedToQuestion = parent.parent_id == null
+
+                await this.notifyPostAuthor({
+                    content: `${actorName} đã ${repliedToQuestion ? 'trả lời câu hỏi' : 'phản hồi câu trả lời'} của bạn`,
+                    metadata: { type: 'answer', question_id: rootId },
+                    recipientId: parent.author_id,
+                    actorId: authorId,
+                })
+            }
+        }
 
         return question
     }
@@ -417,13 +506,15 @@ export class QuestionsService {
      * vote_count được cập nhật theo chênh lệch trong cùng transaction.
      */
     async vote({ id, type, currentUserId }: { id: number; type: VoteType; currentUserId: number }) {
-        return this.prisma.$transaction(async (tx) => {
+        const { result, authorId, parentId, nextValue } = await this.prisma.$transaction(async (tx) => {
             const question = await tx.question.findUnique({
                 where: {
                     id,
                 },
                 select: {
                     id: true,
+                    author_id: true,
+                    parent_id: true,
                 },
             })
 
@@ -472,10 +563,32 @@ export class QuestionsService {
             })
 
             return {
-                ...updatedQuestion,
-                my_vote: nextValue,
+                result: {
+                    ...updatedQuestion,
+                    my_vote: nextValue,
+                },
+                authorId: question.author_id,
+                parentId: question.parent_id,
+                nextValue,
             }
         })
+
+        // Chỉ thông báo khi nhận upvote (bỏ qua bỏ vote/downvote và tự vote bài của mình)
+        if (nextValue === VoteType.Upvote && authorId !== currentUserId) {
+            const rootId = await this.findRootQuestionId(id)
+            const actorName = await this.getUserDisplayName(currentUserId)
+            // parent_id null -> đây là câu hỏi, ngược lại là câu trả lời
+            const isQuestion = parentId == null
+
+            await this.notifyPostAuthor({
+                content: `${actorName} đã bình chọn ${isQuestion ? 'câu hỏi' : 'câu trả lời'} của bạn`,
+                metadata: { type: 'vote', question_id: rootId },
+                recipientId: authorId,
+                actorId: currentUserId,
+            })
+        }
+
+        return result
     }
 
     async update({
