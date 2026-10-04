@@ -1,0 +1,26 @@
+info:
+  name: "[Admin] Moderate question"
+  type: http
+  seq: 9
+
+http:
+  method: PATCH
+  url: "{{API_ENDPOINT}}/admin/questions/1/moderation"
+  headers:
+    - name: Authorization
+      value: Bearer {{ACCESS_TOKEN}}
+  body:
+    type: json
+    data: |-
+        {
+          "status": "rejected",
+          "reason": "Nội dung không phù hợp"
+        }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

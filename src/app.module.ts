@@ -4,6 +4,7 @@ import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core'
 import { createObserveModule } from '@nestjs/observe'
 import { ScheduleModule } from '@nestjs/schedule'
 
+import { AdminModule } from './api/admin/admin.module.js'
 import { AuthModule } from './api/auth/auth.module.js'
 import { NotificationsModule } from './api/notifications/notifications.module.js'
 import { QuestionsModule } from './api/questions/questions.module.js'
@@ -62,6 +63,7 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule()
         NotificationsModule,
         TagsModule,
         UsersModule,
+        AdminModule,
     ],
 
     controllers: [AppController],

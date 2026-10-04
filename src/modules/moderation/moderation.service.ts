@@ -147,6 +147,24 @@ export class ModerationService {
         if (count === 0) return 'skipped'
         if (!result.violated) return 'approved'
 
+        await this.notifyRejected({ ...question, categories: result.categories, reason: result.reason })
+
+        return 'rejected'
+    }
+
+    /**
+     * Báo cho tác giả biết bài bị ẩn (notification + socket).
+     * Dùng chung cho kiểm duyệt bằng LLM và admin từ chối thủ công.
+     */
+    async notifyRejected(question: {
+        id: number
+        title: string
+        parent_id: number | null
+        author_id: number
+        categories: ModerationCategory[]
+        reason: string
+    }) {
+        const isReply = question.parent_id !== null
         const title =
             question.title.length > MAX_NOTIFICATION_TITLE_LENGTH
                 ? `${question.title.slice(0, MAX_NOTIFICATION_TITLE_LENGTH)}…`
@@ -160,8 +178,8 @@ export class ModerationService {
                 type: 'question_rejected',
                 question_id: question.id,
                 parent_id: question.parent_id,
-                categories: result.categories,
-                reason: result.reason,
+                categories: question.categories,
+                reason: question.reason,
             },
             recipient_ids: [question.author_id],
             actorId: question.author_id,
@@ -172,10 +190,8 @@ export class ModerationService {
             parent_id: question.parent_id,
             title,
             status: 'rejected',
-            categories: result.categories,
-            reason: result.reason,
+            categories: question.categories,
+            reason: question.reason,
         })
-
-        return 'rejected'
     }
 }

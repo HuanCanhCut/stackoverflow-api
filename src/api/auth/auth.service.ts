@@ -1,6 +1,7 @@
 import {
     BadRequestException,
     ConflictException,
+    ForbiddenException,
     HttpException,
     HttpStatus,
     Injectable,
@@ -16,6 +17,7 @@ import type { StringValue } from 'ms'
 import { PrismaService } from '../../config/prisma/prisma.service.js'
 import { MailProducer } from '../../modules/mail/mail.producer.js'
 import { JwtPayload } from '../../type.js'
+import { USER_BLOCKED_CODE } from '../../utils/blocked-user.util.js'
 import type { UpdateCurrentUserDto } from './dto/update-current-user.dto.js'
 
 @Injectable()
@@ -26,6 +28,16 @@ export class AuthService {
         private readonly redis: Redis,
         private readonly mailProducer: MailProducer,
     ) {}
+
+    private assertNotBlocked(user: { is_blocked: boolean; blocked_reason: string | null }) {
+        if (user.is_blocked) {
+            throw new ForbiddenException({
+                message: 'Tài khoản đã bị khóa',
+                code: USER_BLOCKED_CODE,
+                reason: user.blocked_reason,
+            })
+        }
+    }
 
     async login({ email, password }: { email: string; password: string }) {
         const user = await this.prisma.user.findUnique({
@@ -47,6 +59,8 @@ export class AuthService {
         if (!passwordIsValid) {
             throw new UnauthorizedException('Email hoặc mật khẩu không chính xác')
         }
+
+        this.assertNotBlocked(user)
 
         // Generate JWT tokens
         const payload = {
@@ -400,6 +414,8 @@ export class AuthService {
                 },
             })
         }
+
+        this.assertNotBlocked(hasUser)
 
         /**
          * Generate token

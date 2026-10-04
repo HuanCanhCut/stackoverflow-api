@@ -1,7 +1,8 @@
-import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common'
+import { CanActivate, ExecutionContext, ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common'
 import { Redis } from 'ioredis'
 
 import type { IRequest } from '../../type.js'
+import { blockedUserKey, USER_BLOCKED_CODE } from '../../utils/blocked-user.util.js'
 import decodedToken from '../../utils/jwt.util.js'
 
 @Injectable()
@@ -34,6 +35,14 @@ export class AuthGuard implements CanActivate {
             throw new UnauthorizedException({
                 message: 'Access token không hợp lệ',
                 code: 'TOKEN_VERIFICATION_FAILED',
+            })
+        }
+
+        // Token còn hạn nhưng user đã bị admin khóa
+        if (await this.redis.get(blockedUserKey(payload.sub))) {
+            throw new ForbiddenException({
+                message: 'Tài khoản đã bị khóa',
+                code: USER_BLOCKED_CODE,
             })
         }
 

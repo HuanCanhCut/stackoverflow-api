@@ -1,0 +1,19 @@
+info:
+  name: "[Admin] Delete tag"
+  type: http
+  seq: 15
+
+http:
+  method: DELETE
+  url: "{{API_ENDPOINT}}/admin/tags/1"
+  headers:
+    - name: Authorization
+      value: Bearer {{ACCESS_TOKEN}}
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

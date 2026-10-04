@@ -1,0 +1,19 @@
+info:
+  name: "[Admin] Re-moderate question"
+  type: http
+  seq: 10
+
+http:
+  method: POST
+  url: "{{API_ENDPOINT}}/admin/questions/1/re-moderate"
+  headers:
+    - name: Authorization
+      value: Bearer {{ACCESS_TOKEN}}
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

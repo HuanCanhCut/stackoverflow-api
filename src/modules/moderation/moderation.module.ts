@@ -24,6 +24,6 @@ import { ModerationService } from './moderation.service.js'
         NotificationsModule,
     ],
     providers: [ModerationService, ModerationProcessor, ModerationProducer],
-    exports: [ModerationProducer],
+    exports: [ModerationProducer, ModerationService],
 })
 export class ModerationModule {}

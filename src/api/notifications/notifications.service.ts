@@ -34,9 +34,10 @@ export class NotificationsService {
             data: {
                 content,
                 actor_id: actorId,
-                ...(metadata !== null && metadata !== undefined && {
-                    metadata: metadata as Prisma.InputJsonObject,
-                }),
+                ...(metadata !== null &&
+                    metadata !== undefined && {
+                        metadata: metadata as Prisma.InputJsonObject,
+                    }),
                 recipients: {
                     createMany: {
                         data: recipientIds.map((recipientId) => ({
@@ -52,15 +53,7 @@ export class NotificationsService {
         })
     }
 
-    async findAll({
-        page,
-        per_page,
-        currentUserId,
-    }: {
-        page: number
-        per_page: number
-        currentUserId: number
-    }) {
+    async findAll({ page, per_page, currentUserId }: { page: number; per_page: number; currentUserId: number }) {
         const [notifications, total, unseenCount] = await this.prisma.$transaction([
             this.prisma.notification.findMany({
                 where: {
@@ -162,5 +155,4 @@ export class NotificationsService {
             throw new NotFoundException('Notification not found')
         }
     }
-
 }

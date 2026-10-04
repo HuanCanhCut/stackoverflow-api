@@ -63,6 +63,19 @@ async function bootstrap() {
 
     app.use(helmet())
 
+    // Trang quản trị chạy trên trình duyệt (khác origin). App mobile không cần CORS.
+    // Expose x-refresh-token-required để client đọc được và tự refresh token
+    const corsOrigins = process.env.CORS_ORIGINS?.split(',')
+        .map((origin) => origin.trim())
+        .filter(Boolean)
+
+    if (corsOrigins?.length) {
+        app.enableCors({
+            origin: corsOrigins,
+            exposedHeaders: ['x-refresh-token-required'],
+        })
+    }
+
     await app.listen(process.env.PORT ?? 8000)
 }
 

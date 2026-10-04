@@ -80,4 +80,15 @@ describe('AuthGuard', () => {
         await expect(guard.canActivate(context)).resolves.toBe(true)
         expect(req.decoded).toMatchObject({ sub: 42, jti: 'token-id' })
     })
+
+    it('rejects a valid token of a blocked user', async () => {
+        const token = jwt.sign({ sub: 42 }, secret)
+        const { req, context } = contextFor(`Bearer ${token}`)
+        redis.get.mockImplementation(async (key: string) => (key === 'blocked_user:42' ? '1' : null))
+
+        await expect(guard.canActivate(context)).rejects.toMatchObject({
+            response: { code: 'USER_BLOCKED' },
+        })
+        expect(req.decoded).toBeUndefined()
+    })
 })

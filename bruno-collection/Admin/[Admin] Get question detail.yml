@@ -1,0 +1,19 @@
+info:
+  name: "[Admin] Get question detail"
+  type: http
+  seq: 8
+
+http:
+  method: GET
+  url: "{{API_ENDPOINT}}/admin/questions/1"
+  headers:
+    - name: Authorization
+      value: Bearer {{ACCESS_TOKEN}}
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false
