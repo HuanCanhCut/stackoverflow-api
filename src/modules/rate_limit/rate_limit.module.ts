@@ -17,7 +17,7 @@ import { RedisModule } from '../../config/redis/redis.module.js'
                 throttlers: [
                     {
                         ttl: seconds(60),
-                        limit: 200,
+                        limit: 20000,
                     },
                 ],
 

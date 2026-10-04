@@ -17,7 +17,9 @@ import type { StringValue } from 'ms'
 import { PrismaService } from '../../config/prisma/prisma.service.js'
 import { MailProducer } from '../../modules/mail/mail.producer.js'
 import { JwtPayload } from '../../type.js'
+import { S3Folder } from '../../types/s3.type.js'
 import { USER_BLOCKED_CODE } from '../../utils/blocked-user.util.js'
+import { UploadsService } from '../uploads/uploads.service.js'
 import type { UpdateCurrentUserDto } from './dto/update-current-user.dto.js'
 
 @Injectable()
@@ -27,6 +29,7 @@ export class AuthService {
         private readonly jwtService: JwtService,
         private readonly redis: Redis,
         private readonly mailProducer: MailProducer,
+        private readonly uploadsService: UploadsService,
     ) {}
 
     private assertNotBlocked(user: { is_blocked: boolean; blocked_reason: string | null }) {
@@ -244,7 +247,7 @@ export class AuthService {
     }
 
     async getCurrentUser(currentUserId: number) {
-        const [user, questionCount, voteAggregation, answeredQuestions] = await this.prisma.$transaction([
+        const [user, questionCount, voteAggregation, answerCount] = await this.prisma.$transaction([
             this.prisma.user.findUnique({
                 where: {
                     id: currentUserId,
@@ -253,12 +256,14 @@ export class AuthService {
                     email: false,
                 },
             }),
+            // Số câu hỏi gốc đã đăng (không tính câu trả lời)
             this.prisma.question.count({
                 where: {
                     author_id: currentUserId,
                     parent_id: null,
                 },
             }),
+            // Tổng vote nhận được trên tất cả bài viết (cả câu hỏi lẫn câu trả lời)
             this.prisma.question.aggregate({
                 where: {
                     author_id: currentUserId,
@@ -267,8 +272,8 @@ export class AuthService {
                     vote_count: true,
                 },
             }),
-            this.prisma.question.groupBy({
-                by: ['parent_id'],
+            // Tổng số câu trả lời đã đăng (mỗi câu trả lời là 1 question có parent_id)
+            this.prisma.question.count({
                 where: {
                     author_id: currentUserId,
                     parent_id: {
@@ -286,7 +291,7 @@ export class AuthService {
             ...user,
             question_count: questionCount,
             vote_count: voteAggregation._sum.vote_count ?? 0,
-            answered_question_count: answeredQuestions.length,
+            answer_count: answerCount,
         }
     }
 
@@ -320,11 +325,28 @@ export class AuthService {
             }
         }
 
+        // Tách avatar_upload_id ra khỏi dữ liệu ghi thẳng vào cột (nó không phải field của bảng users)
+        const { avatar_upload_id, ...data } = body
+        const updateData: Omit<UpdateCurrentUserDto, 'avatar_upload_id'> & { avatar_path?: string } = { ...data }
+
+        // Người dùng đổi ảnh: xác thực upload_id (đảm bảo file thuộc user này và tồn tại trên S3),
+        // rồi dựng URL công khai từ object key để lưu vào avatar_path
+        if (avatar_upload_id) {
+            const [objectKey] = await this.uploadsService.verifyUploadIds({
+                uploadIds: [avatar_upload_id],
+                currentUserId,
+                folder: S3Folder.AVATARS,
+            })
+
+            const publicBaseUrl = (process.env.S3_PUBLIC_URL ?? '').replace(/\/+$/, '')
+            updateData.avatar_path = `${publicBaseUrl}/${objectKey}`
+        }
+
         return this.prisma.user.update({
             where: {
                 id: currentUserId,
             },
-            data: body,
+            data: updateData,
             omit: {
                 email: false,
             },

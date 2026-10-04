@@ -48,6 +48,12 @@ export class NotificationsController {
         await this.notificationsService.markAllAsSeen(req.decoded.sub)
     }
 
+    @Patch('read')
+    @HttpCode(HttpStatus.NO_CONTENT)
+    async markAllAsRead(@Req() req: IRequest) {
+        await this.notificationsService.markAllAsRead(req.decoded.sub)
+    }
+
     @Patch(':id/read')
     @HttpCode(HttpStatus.NO_CONTENT)
     async markAsRead(@Param('id') id: string, @Req() req: IRequest) {

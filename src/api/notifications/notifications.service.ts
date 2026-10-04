@@ -126,6 +126,19 @@ export class NotificationsService {
         })
     }
 
+    async markAllAsRead(currentUserId: number) {
+        await this.prisma.notificationRecipient.updateMany({
+            where: {
+                recipient_id: currentUserId,
+                is_read: false,
+            },
+            data: {
+                is_read: true,
+                read_at: new Date(),
+            },
+        })
+    }
+
     async markAsRead({ id, currentUserId }: { id: string; currentUserId: number }) {
         const result = await this.prisma.notificationRecipient.updateMany({
             where: {
@@ -144,10 +157,12 @@ export class NotificationsService {
     }
 
     async remove({ id, currentUserId }: { id: string; currentUserId: number }) {
-        const result = await this.prisma.notification.deleteMany({
+        // Người nhận xóa thông báo khỏi danh sách của mình -> gỡ bản ghi recipient tương ứng.
+        // (Notification gốc có thể còn cho người nhận khác; GET của user này sẽ không còn thấy nó.)
+        const result = await this.prisma.notificationRecipient.deleteMany({
             where: {
-                id,
-                actor_id: currentUserId,
+                notification_id: id,
+                recipient_id: currentUserId,
             },
         })
 
