@@ -12,6 +12,7 @@ import { GetQuestionsDto } from './dto/get-questions.dto.js'
 import { GetSavedQuestionsDto } from './dto/get-saved-questions.dto.js'
 import { UpdateQuestionDto } from './dto/update-question.dto.js'
 
+import type { Prisma } from '~/generated/prisma/client.js'
 import { S3Folder } from '~/types/s3.type.js'
 
 type TransactionClient = Parameters<Parameters<PrismaService['$transaction']>[0]>[0]
@@ -262,8 +263,8 @@ export class QuestionsService {
         return question
     }
 
-    async findAll({ tag_id, page, per_page }: GetQuestionsDto, currentUserId?: number) {
-        const where = {
+    async findAll({ tag_id, search, page, per_page }: GetQuestionsDto, currentUserId?: number) {
+        const where: Prisma.QuestionWhereInput = {
             parent_id: null,
             ...NOT_REJECTED,
             ...(tag_id !== undefined && {
@@ -272,6 +273,21 @@ export class QuestionsService {
                         tag_id,
                     },
                 },
+            }),
+            // Tìm theo tiêu đề hoặc nội dung; collation MySQL mặc định đã không phân biệt hoa thường
+            ...(search && {
+                OR: [
+                    {
+                        title: {
+                            contains: search,
+                        },
+                    },
+                    {
+                        body: {
+                            contains: search,
+                        },
+                    },
+                ],
             }),
         }
 
@@ -531,9 +547,8 @@ export class QuestionsService {
 
             const existingVote = await tx.questionVote.findUnique({ where })
             const previousValue = existingVote?.value ?? 0
-            // Giá trị lưu trong DB là số (1 / -1), đổi enum về số để so sánh
-            const voteValue: number = type
-            const nextValue = previousValue === voteValue ? 0 : voteValue
+            // Giá trị lưu trong DB là số (1 / -1), 0 nghĩa là bỏ vote
+            const nextValue: VoteType | 0 = previousValue === Number(type) ? 0 : type
 
             if (nextValue === 0) {
                 await tx.questionVote.delete({ where })

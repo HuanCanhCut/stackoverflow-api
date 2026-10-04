@@ -104,16 +104,17 @@ export class AuthService {
             //
         }
 
-        if (decodedRefreshToken) {
-            await this.prisma.refreshToken.delete({
+        if (decodedRefreshToken?.jti) {
+            // deleteMany để không ném P2025 khi token đã bị xoá/rotate trước đó
+            await this.prisma.refreshToken.deleteMany({
                 where: {
-                    jti: decodedRefreshToken?.jti,
+                    jti: decodedRefreshToken.jti,
                 },
             })
         }
 
         if (access_token) {
-            await this.redis.set(`access_token:${access_token}`, 'true', 'EX', '30m')
+            await this.redis.set(`access_token:${access_token}`, 'true', 'EX', 30 * 60)
         }
     }
 

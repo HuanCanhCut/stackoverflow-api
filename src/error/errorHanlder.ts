@@ -1,4 +1,4 @@
-import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus } from '@nestjs/common'
+import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus, Logger } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { TracerService } from '@nestjs/observe'
 import type { Request, Response } from 'express'
@@ -8,6 +8,8 @@ import { snakeCaseKeys } from '../utils/object.util.js'
 
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
+    private readonly logger = new Logger('ExceptionFilter')
+
     constructor(
         private readonly tracerService: TracerService,
         private readonly configService: ConfigService,
@@ -23,6 +25,10 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         const status = this.getHttpStatus(exception)
 
         const shouldCaptureError = this.configService.get<string>('OBSERVE_ENABLED', 'true') === 'true'
+
+        if (status >= 500) {
+            this.logger.error(`${request.method} ${request.originalUrl} ${status}`, exception?.stack ?? String(exception))
+        }
 
         // Observe vẫn nhận lỗi thật
         if (status >= 500 && shouldCaptureError) {
