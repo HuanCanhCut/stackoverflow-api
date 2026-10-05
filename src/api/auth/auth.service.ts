@@ -331,7 +331,7 @@ export class AuthService {
         const updateData: Omit<UpdateCurrentUserDto, 'avatar_upload_id'> & { avatar_path?: string } = { ...data }
 
         // Người dùng đổi ảnh: xác thực upload_id (đảm bảo file thuộc user này và tồn tại trên S3),
-        // rồi dựng URL công khai từ object key để lưu vào avatar_path
+        // rồi chỉ lưu object key vào avatar_path (origin được nối khi trả ra, xem prisma.service.ts)
         if (avatar_upload_id) {
             const [objectKey] = await this.uploadsService.verifyUploadIds({
                 uploadIds: [avatar_upload_id],
@@ -339,8 +339,7 @@ export class AuthService {
                 folder: S3Folder.AVATARS,
             })
 
-            const publicBaseUrl = (process.env.S3_PUBLIC_URL ?? '').replace(/\/+$/, '')
-            updateData.avatar_path = `${publicBaseUrl}/${objectKey}`
+            updateData.avatar_path = objectKey
         }
 
         return this.prisma.user.update({
