@@ -1,4 +1,4 @@
-import { GoogleGenAI } from '@google/genai'
+import { FinishReason, GoogleGenAI, ThinkingLevel } from '@google/genai'
 import { Injectable, Logger } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 
@@ -103,9 +103,21 @@ export class ModerationService {
             contents: buildPrompt(input),
             config: {
                 temperature: 0,
-                maxOutputTokens: 512,
+                // Token thinking bị tính chung vào maxOutputTokens: để thinking mặc định thì bài dài có thể
+                // tiêu hết hạn mức trước khi viết xong JSON. Phân loại đơn giản nên tắt gần hết thinking
+                // (Gemma chỉ nhận MINIMAL, không nhận thinkingBudget hay LOW), nới thêm hạn mức cho chắc
+                thinkingConfig: {
+                    thinkingLevel: ThinkingLevel.MINIMAL,
+                },
+                maxOutputTokens: 2048,
             },
         })
+
+        if (response.candidates?.[0]?.finishReason === FinishReason.MAX_TOKENS) {
+            throw new Error(
+                `Moderation response truncated (MAX_TOKENS), usage: ${JSON.stringify(response.usageMetadata)}`,
+            )
+        }
 
         return parseModerationResult(response.text ?? '')
     }
