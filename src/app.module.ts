@@ -6,6 +6,7 @@ import { ScheduleModule } from '@nestjs/schedule'
 
 import { AdminModule } from './api/admin/admin.module.js'
 import { AuthModule } from './api/auth/auth.module.js'
+import { ConversationsModule } from './api/conversations/conversations.module.js'
 import { NotificationsModule } from './api/notifications/notifications.module.js'
 import { QuestionsModule } from './api/questions/questions.module.js'
 import { TagsModule } from './api/tags/tags.module.js'
@@ -64,6 +65,7 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule()
         TagsModule,
         UsersModule,
         AdminModule,
+        ConversationsModule,
     ],
 
     controllers: [AppController],

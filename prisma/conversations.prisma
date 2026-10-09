@@ -1,0 +1,50 @@
+// Hội thoại 1-1 giữa 2 user. Luôn lưu user_one_id < user_two_id để mỗi cặp user chỉ có đúng 1 hội thoại
+model Conversation {
+  id              Int       @id @default(autoincrement())
+  user_one_id     Int
+  user_two_id     Int
+  // Thời điểm tin nhắn cuối, dùng để sắp xếp danh sách hội thoại (null khi chưa có tin nhắn)
+  last_message_at DateTime?
+  created_at      DateTime  @default(now())
+  updated_at      DateTime  @updatedAt
+
+  user_one User      @relation("ConversationUserOne", fields: [user_one_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  user_two User      @relation("ConversationUserTwo", fields: [user_two_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  messages Message[]
+
+  @@unique([user_one_id, user_two_id])
+  @@index([user_two_id])
+  @@map("conversations")
+}
+
+model Message {
+  id              Int       @id @default(autoincrement())
+  conversation_id Int
+  sender_id       Int
+  content         String?   @db.Text
+  // Thời điểm người nhận đã đọc, null là chưa đọc
+  read_at         DateTime?
+  created_at      DateTime  @default(now())
+  updated_at      DateTime  @updatedAt
+
+  conversation Conversation        @relation(fields: [conversation_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  sender       User                @relation("MessageSender", fields: [sender_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  attachments  MessageAttachment[]
+
+  @@index([conversation_id, id])
+  @@index([sender_id])
+  @@map("messages")
+}
+
+model MessageAttachment {
+  id         Int      @id @default(autoincrement())
+  message_id Int
+  object_key String   @db.VarChar(255)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  message Message @relation(fields: [message_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([message_id])
+  @@map("message_attachments")
+}

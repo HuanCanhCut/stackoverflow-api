@@ -9,6 +9,45 @@ import type { Prisma } from '~/generated/prisma/client.js'
 export class UsersService {
     constructor(private readonly prisma: PrismaService) {}
 
+    // Hồ sơ công khai kèm thống kê như GET /auth/me, nhưng không tính bài đã bị kiểm duyệt ẩn
+    async findOne(userId: number) {
+        const visibleWhere: Prisma.QuestionWhereInput = {
+            author_id: userId,
+            moderation_status: { not: 'rejected' },
+        }
+
+        const [user, questionCount, voteAggregation, answerCount] = await this.prisma.$transaction([
+            this.prisma.user.findUnique({
+                where: {
+                    id: userId,
+                },
+            }),
+            this.prisma.question.count({
+                where: { ...visibleWhere, parent_id: null },
+            }),
+            this.prisma.question.aggregate({
+                where: visibleWhere,
+                _sum: {
+                    vote_count: true,
+                },
+            }),
+            this.prisma.question.count({
+                where: { ...visibleWhere, parent_id: { not: null } },
+            }),
+        ])
+
+        if (!user) {
+            throw new NotFoundException('User not found')
+        }
+
+        return {
+            ...user,
+            question_count: questionCount,
+            vote_count: voteAggregation._sum.vote_count ?? 0,
+            answer_count: answerCount,
+        }
+    }
+
     async findQuestions(userId: number, query: GetUserQuestionsDto) {
         await this.ensureUserExists(userId)
 

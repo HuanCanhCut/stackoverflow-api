@@ -76,6 +76,16 @@ export const extendPrismaClient = (basePrisma: ReturnType<typeof createBasePrism
                     },
                 },
             },
+            messageAttachment: {
+                url: {
+                    needs: {
+                        object_key: true,
+                    },
+                    compute(attachment) {
+                        return toPublicUrl(attachment.object_key)
+                    },
+                },
+            },
         },
     })
 }

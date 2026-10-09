@@ -1,6 +1,7 @@
 export enum S3Folder {
     AVATARS = 'avatars',
     QUESTIONS = 'questions',
+    MESSAGES = 'messages',
 }
 
 export enum S3ContentType {

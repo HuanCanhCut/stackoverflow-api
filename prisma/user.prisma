@@ -34,6 +34,9 @@ model User {
   notifications           Notification[]          @relation("NotificationActor")
   notification_recipients NotificationRecipient[] @relation("NotificationRecipientUser")
   refresh_tokens          RefreshToken[]
+  conversations_as_one    Conversation[]          @relation("ConversationUserOne")
+  conversations_as_two    Conversation[]          @relation("ConversationUserTwo")
+  sent_messages           Message[]               @relation("MessageSender")
   created_at              DateTime                @default(now())
   updated_at              DateTime                @updatedAt
 
