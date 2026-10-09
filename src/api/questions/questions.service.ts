@@ -32,6 +32,23 @@ const visibleReplyCount = {
     },
 }
 
+// Giới hạn số từ khoá để câu truy vấn không sinh quá nhiều điều kiện LIKE
+const MAX_SEARCH_TERMS = 10
+
+// Tách chuỗi tìm kiếm thành các từ khoá, bỏ dấu câu bao quanh (VD: "'map')" -> "map") và từ trùng lặp.
+// Không bỏ ký tự như + # để giữ nguyên từ khoá kiểu "c++", "c#"
+export const splitSearchTerms = (search: string) => {
+    const terms = search
+        .split(/\s+/)
+        .map((term) => term.replaceAll(/^["'`()[\]{}<>,.;:!?]+|["'`()[\]{}<>,.;:!?]+$/g, ''))
+        .filter(Boolean)
+
+    const uniqueTerms = [...new Set(terms.map((term) => term.toLowerCase()))].slice(0, MAX_SEARCH_TERMS)
+
+    // Chuỗi toàn dấu câu (VD: "{}") thì tìm nguyên văn
+    return uniqueTerms.length ? uniqueTerms : [search]
+}
+
 export enum VoteType {
     Upvote = 1,
     Downvote = -1,
@@ -274,20 +291,12 @@ export class QuestionsService {
                     },
                 },
             }),
-            // Tìm theo tiêu đề hoặc nội dung; collation MySQL mặc định đã không phân biệt hoa thường
+            // Mỗi từ khoá phải xuất hiện trong tiêu đề hoặc nội dung (không cần đúng thứ tự, liền nhau),
+            // để query dài như thông điệp lỗi đọc từ ảnh vẫn khớp. Collation MySQL mặc định đã không phân biệt hoa thường
             ...(search && {
-                OR: [
-                    {
-                        title: {
-                            contains: search,
-                        },
-                    },
-                    {
-                        body: {
-                            contains: search,
-                        },
-                    },
-                ],
+                AND: splitSearchTerms(search).map((term) => ({
+                    OR: [{ title: { contains: term } }, { body: { contains: term } }],
+                })),
             }),
         }
 

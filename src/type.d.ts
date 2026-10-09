@@ -1,3 +1,5 @@
+/// <reference types="multer" />
+
 import { Request } from 'express'
 
 export interface JwtPayload {
