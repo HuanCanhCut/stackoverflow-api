@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common'
 
 import { PrismaService } from '../../config/prisma/prisma.service.js'
 import type { GetUserQuestionsDto } from './dto/get-user-questions.dto.js'
+import type { SearchUsersDto } from './dto/search-users.dto.js'
 
 import type { Prisma } from '~/generated/prisma/client.js'
 
@@ -45,6 +46,46 @@ export class UsersService {
             question_count: questionCount,
             vote_count: voteAggregation._sum.vote_count ?? 0,
             answer_count: answerCount,
+        }
+    }
+
+    /**
+     * Tìm user theo tên hoặc nickname, bỏ qua chính mình và tài khoản bị khóa / vô hiệu.
+     * full_name là field tính toán nên tách từ khóa thành từng từ: mỗi từ phải khớp first_name,
+     * last_name hoặc nickname, nhờ vậy gõ "Nguyen An" vẫn ra người có họ "Nguyen" và tên "An"
+     */
+    async search({ q, page, per_page, currentUserId }: SearchUsersDto & { currentUserId: number }) {
+        const words = q.split(/\s+/).filter(Boolean)
+
+        const where: Prisma.UserWhereInput = {
+            id: { not: currentUserId },
+            is_active: true,
+            is_blocked: false,
+            AND: words.map((word) => ({
+                OR: [
+                    { first_name: { contains: word } },
+                    { last_name: { contains: word } },
+                    { nickname: { contains: word } },
+                ],
+            })),
+        }
+
+        const [users, total] = await this.prisma.$transaction([
+            this.prisma.user.findMany({
+                where,
+                skip: (page - 1) * per_page,
+                take: per_page,
+                orderBy: [{ first_name: 'asc' }, { id: 'asc' }],
+            }),
+            this.prisma.user.count({ where }),
+        ])
+
+        return {
+            data: users,
+            total,
+            count: users.length,
+            current_page: page,
+            per_page,
         }
     }
 
